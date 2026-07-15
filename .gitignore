@@ -7,6 +7,11 @@ __pycache__/
 # Local deploy zips (web app packaging, not needed for the APK build)
 *.zip
 
+# NEVER commit the signing key — it lives in GitHub secrets only
+*.keystore
+*.jks
+keystore/
+
 # OS junk
 Thumbs.db
 .DS_Store

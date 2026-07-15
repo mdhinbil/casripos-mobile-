@@ -84,84 +84,86 @@ jobs:
           ls -la $ANDROID_HOME/build-tools/35.0.0/aidl
           $ANDROID_HOME/tools/bin/sdkmanager --version
 
-      # Create a signing keystore. Uses repo secrets if present (stable key,
-      # good for reinstalls/updates); otherwise generates a throwaway one so the
-      # build works out-of-the-box on a fresh repo with no setup.
-      - name: Prepare signing keystore
-        id: keystore
+      # The signing key is the Play Store UPLOAD KEY. It is kept ONLY in GitHub
+      # secrets (never in the repo). Set these once via the gh CLI:
+      #   gh secret set KEYSTORE_BASE64   < casri-upload.keystore.b64
+      #   gh secret set KEYSTORE_PASSWORD --body '<password>'
+      #   gh secret set KEY_ALIAS         --body 'casri'
+      #   gh secret set KEY_PASSWORD      --body '<password>'
+      - name: Decode upload keystore from secret
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Using keystore from repo secrets"
-            echo "$KEYSTORE_BASE64" | base64 -d > $HOME/casri.keystore
-            echo "ks_pass=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
-            echo "ks_alias=$KEY_ALIAS"        >> "$GITHUB_OUTPUT"
-          else
-            echo "No KEYSTORE_BASE64 secret — generating a throwaway keystore"
-            keytool -genkeypair -v \
-              -keystore $HOME/casri.keystore \
-              -alias casri \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass casri1234 -keypass casri1234 \
-              -dname "CN=Casri POS, O=Casri, C=SO"
-            echo "ks_pass=casri1234" >> "$GITHUB_OUTPUT"
-            echo "ks_alias=casri"    >> "$GITHUB_OUTPUT"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is missing. Set the signing secrets (see workflow comment)."
+            exit 1
           fi
+          echo "$KEYSTORE_BASE64" | base64 -d > $HOME/casri-upload.keystore
+          ls -la $HOME/casri-upload.keystore
 
+      # ── Debug APK (installable for YOUR testing before uploading to Play) ──
       - name: Build APK (debug)
-        run: |
-          buildozer -v android debug
+        run: buildozer -v android debug
 
-      # Buildozer's debug APK is only v1-signed (jarsigner). Android 11+ refuses
-      # to install v1-only APKs → "App not installed". Re-sign with apksigner
-      # using v1+v2+v3 so it installs on modern phones.
+      # Buildozer's debug APK is only v1-signed. Android 11+ refuses v1-only
+      # APKs → "App not installed". Re-sign with apksigner v1+v2+v3.
       - name: Re-sign debug APK (v1+v2+v3 for Android 11+)
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           APK=$(ls bin/*-debug.apk | head -1)
           APKSIGNER=$HOME/.buildozer/android/platform/android-sdk/build-tools/35.0.0/apksigner
-          echo "Re-signing $APK"
           $APKSIGNER sign \
-            --ks $HOME/casri.keystore \
-            --ks-key-alias "${{ steps.keystore.outputs.ks_alias }}" \
-            --ks-pass pass:"${{ steps.keystore.outputs.ks_pass }}" \
-            --key-pass pass:"${{ steps.keystore.outputs.ks_pass }}" \
+            --ks $HOME/casri-upload.keystore \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass pass:"$KS_PASS" \
+            --key-pass pass:"$KEY_PASS" \
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
             "$APK"
-          echo "--- Signature verification ---"
           $APKSIGNER verify --verbose "$APK"
-          # Give it a friendly name for the release
           cp "$APK" "bin/CasriPOS-debug.apk"
 
-      - name: Show built APK
+      # ── Release AAB (this is what you upload to the Play Console) ──
+      - name: Build signed AAB (release)
+        env:
+          P4A_RELEASE_KEYSTORE: /home/runner/casri-upload.keystore
+          P4A_RELEASE_KEYSTORE_PASSWD: ${{ secrets.KEYSTORE_PASSWORD }}
+          P4A_RELEASE_KEYALIAS: ${{ secrets.KEY_ALIAS }}
+          P4A_RELEASE_KEYALIAS_PASSWD: ${{ secrets.KEY_PASSWORD }}
+        run: buildozer -v android release
+
+      - name: Show built artifacts
         if: always()
         run: ls -lh bin/ || true
 
-      - name: Upload APK artifact
+      - name: Upload artifacts (APK + AAB)
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: casripos-apk
-          path: bin/CasriPOS-debug.apk
+          name: casripos-build
+          path: |
+            bin/CasriPOS-debug.apk
+            bin/*.aab
           if-no-files-found: warn
           retention-days: 30
 
-      # GitHub Releases use storage separate from Actions artifacts, so the APK
-      # is downloadable even if the artifact quota is exhausted.
-      - name: Publish APK to GitHub Releases
+      # GitHub Releases use storage separate from Actions artifacts.
+      - name: Publish to GitHub Releases (APK for testing + AAB for Play)
         if: success() || failure()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: Casri POS build ${{ github.run_number }}
           body: |
-            Auto-generated Casri POS APK from commit ${{ github.sha }}.
-            Download CasriPOS-debug.apk below and install it on the phone
-            (enable "Install unknown apps" for your browser/file manager first).
-          files: bin/CasriPOS-debug.apk
+            Casri POS build from commit ${{ github.sha }}.
+            • CasriPOS-debug.apk — install on a phone to test (enable "Install unknown apps").
+            • *.aab — upload this to the Google Play Console.
+          files: |
+            bin/CasriPOS-debug.apk
+            bin/*.aab
           token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_unmatched_files: false

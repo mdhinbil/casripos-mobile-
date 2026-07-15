@@ -11,18 +11,30 @@ Point-of-sale web app **and** its offline Android APK, in one folder.
 
 ## Build the APK
 
-Pushing to GitHub `main` runs `.github/workflows/build-apk.yml`, which builds a
-signed, installable debug APK and attaches **`CasriPOS-debug.apk`** to a GitHub
-Release. Download it on the phone and install (enable "Install unknown apps"
-for your browser/file manager first).
+Pushing to GitHub `main` runs `.github/workflows/build-apk.yml`, which produces:
 
-You can also trigger it manually from the Actions tab (workflow_dispatch).
+- **`CasriPOS-debug.apk`** — install on a phone to test before publishing.
+- **`*.aab`** — the Android App Bundle you upload to the **Google Play Console**.
 
-### Signing
+Both are attached to a GitHub Release. You can also trigger the build manually
+from the Actions tab (workflow_dispatch).
 
-With no secrets set, CI generates a throwaway keystore so the build works out of
-the box. For stable reinstalls/updates (and eventual Play Store upload), add repo
-secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and CI will use them.
+### Signing (Play Store upload key)
+
+The build signs with a **Play upload key** kept ONLY in GitHub secrets — never in
+the repo. Set the four secrets once (values are printed by the key-generation
+step; the `.b64` file holds the keystore):
+
+```
+gh secret set KEYSTORE_BASE64   --repo <owner>/casripos-mobile < casri-upload.keystore.b64
+gh secret set KEYSTORE_PASSWORD --repo <owner>/casripos-mobile --body '<password>'
+gh secret set KEY_ALIAS         --repo <owner>/casripos-mobile --body 'casri'
+gh secret set KEY_PASSWORD      --repo <owner>/casripos-mobile --body '<password>'
+```
+
+**Back up `casri-upload.keystore` and its password somewhere safe.** With Play
+App Signing a lost upload key can be reset via Google support, but keeping it is
+far easier. `package.name` (`com.casri.casripos`) is permanent once published.
 
 ## Local build (optional)
 
