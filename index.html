@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a6ef5">
+<title>Casri POS</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="LP">
+  <div class="lp-card">
+    <div class="lp-logo">&#128722;</div>
+    <div class="lp-title">Casri POS</div>
+    <div class="lp-sub">Point of Sale System</div>
+    <div class="lp-err" id="loginErr">Wrong username or password</div>
+    <div class="lp-row"><span class="ic">&#128100;</span><input type="text" id="loginUser" placeholder="Username" autocomplete="username"></div>
+    <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"></div>
+    <button class="lp-btn" onclick="doLogin()">Sign in</button>
+    <div class="lp-hint">Demo: <code>admin</code> / <code>admin123</code></div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="AP">
+  <div class="AW">
+    <div class="sbOverlay" id="sbOverlay" onclick="closeSidebar()"></div>
+    <aside class="SB" id="sidebar">
+      <div class="sbTop">
+        <div class="sbLB">&#128722;</div>
+        <div class="sbName" id="sbBiz">Casri POS</div>
+        <button class="sbClose" onclick="closeSidebar()">&#10005;</button>
+      </div>
+      <nav class="sbNav" id="sbNav"></nav>
+      <div class="sbUsr">
+        <div class="sbAv" id="sbAv">AD</div>
+        <div style="flex:1;min-width:0">
+          <div class="sbNm" id="sbNm">Admin</div>
+          <div class="sbRl" id="sbRl">Administrator</div>
+        </div>
+        <button class="sbOut" onclick="doLogout()" title="Sign out">&#9211;</button>
+      </div>
+    </aside>
+    <div class="MA">
+      <div class="TB">
+        <button class="tbMenu" onclick="openSidebar()">&#9776;</button>
+        <div class="tbTitle" id="tbT">Dashboard</div>
+        <button class="tbBtn" id="langEN" onclick="setLang('en')">EN</button>
+        <button class="tbBtn" id="langSO" onclick="setLang('so')">SO</button>
+      </div>
+      <div class="PA" id="PA"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Add Product Modal -->
+<div class="MOv" id="M_prod">
+  <div class="MB">
+    <button class="MC" onclick="closeM('M_prod')">&#10005;</button>
+    <div class="MT" id="M_prod_t">Add product</div>
+    <div class="MS">Fill in product details</div>
+    <div class="fi"><label>Name</label><input type="text" id="mp_nm" placeholder="e.g. Coca-Cola 500ml"></div>
+    <div class="fi"><label>Category</label><input type="text" id="mp_cat" placeholder="e.g. Drinks"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="fi"><label>Price (USD)</label><input type="number" id="mp_pr" step="0.01" min="0" placeholder="1.50"></div>
+      <div class="fi"><label>Stock</label><input type="number" id="mp_stk" min="0" placeholder="50"></div>
+    </div>
+    <div class="fi"><label>Icon (emoji)</label><input type="text" id="mp_ic" placeholder="&#127870;" maxlength="2"></div>
+    <div id="mp_retail_row" style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="fi"><label>SKU</label><input type="text" id="mp_sku" placeholder="ABC-001"></div>
+      <div class="fi"><label>Barcode</label><input type="text" id="mp_bc" placeholder="1234567890"></div>
+    </div>
+    <div class="MF">
+      <button class="btn" onclick="closeM('M_prod')">Cancel</button>
+      <button class="btn btnP" onclick="saveProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Business Modal -->
+<div class="MOv" id="M_biz">
+  <div class="MB">
+    <button class="MC" onclick="closeM('M_biz')">&#10005;</button>
+    <div class="MT" id="M_biz_t">Add business</div>
+    <div class="MS">Each business has its own products, sales, and settings.</div>
+    <div class="fi"><label>Business name</label><input type="text" id="mb_nm" placeholder="e.g. Mahmoud's Cafe"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="fi"><label>Type</label><select id="mb_type">
+        <option value="shop">&#127978; Shop</option>
+        <option value="retail">&#128230; Retail</option>
+        <option value="restaurant">&#127869; Restaurant</option>
+        <option value="cafe">&#9749; Cafe</option>
+        <option value="bar">&#127861; Juice / Tea bar</option>
+      </select></div>
+      <div class="fi"><label>Currency</label><select id="mb_ccy">
+        <option value="USD">USD</option>
+        <option value="SOS">SOS</option>
+        <option value="SLSH">SLSH</option>
+      </select></div>
+    </div>
+    <div class="fi"><label>Address</label><input type="text" id="mb_addr" placeholder="Optional"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="fi"><label>Phone</label><input type="text" id="mb_ph" placeholder="+252..."></div>
+      <div class="fi"><label>Tax %</label><input type="number" id="mb_tax" min="0" max="100" step="0.01" value="0"></div>
+    </div>
+    <div class="MF">
+      <button class="btn" onclick="closeM('M_biz')">Cancel</button>
+      <button class="btn btnP" onclick="saveBiz()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="MOv" id="M_rec">
+  <div class="MB">
+    <button class="MC" onclick="closeM('M_rec')">&#10005;</button>
+    <div class="MT">Receipt</div>
+    <div id="rec_body" style="font-family:monospace;font-size:11px;line-height:1.7;background:#fafbfd;padding:14px;border:1px dashed #c9d3e3;border-radius:8px;margin:14px 0"></div>
+    <div class="MF">
+      <button class="btn" onclick="closeM('M_rec')">Close</button>
+      <button class="btn btnP" onclick="printReceipt()">&#128424; Print</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

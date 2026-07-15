@@ -1,0 +1,12 @@
+# Buildozer / python-for-android build output
+bin/
+.buildozer/
+__pycache__/
+*.pyc
+
+# Local deploy zips (web app packaging, not needed for the APK build)
+*.zip
+
+# OS junk
+Thumbs.db
+.DS_Store

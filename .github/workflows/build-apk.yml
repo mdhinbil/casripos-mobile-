@@ -1,0 +1,167 @@
+name: Build Casri POS APK
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip \
+            autoconf automake libtool pkg-config \
+            zlib1g-dev libncurses-dev libncursesw5-dev \
+            cmake libffi-dev libssl-dev \
+            ccache patch
+
+      - name: Install Buildozer + Cython + Pillow
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install buildozer==1.5.0 cython==0.29.36 pillow
+
+      # Regenerate icon.png / presplash.png so the build never depends on the
+      # committed binaries being present or up to date.
+      - name: Generate launcher assets
+        run: python generate_assets.py
+
+      - name: Cache Buildozer global (~/.buildozer)
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-v1-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-v1-
+
+      - name: Cache Buildozer local (.buildozer)
+        uses: actions/cache@v4
+        with:
+          path: .buildozer
+          key: buildozer-local-v1-${{ hashFiles('buildozer.spec', 'main.py') }}
+          restore-keys: |
+            buildozer-local-v1-
+
+      - name: Pre-install Android SDK + build-tools 35.0.0 + accept licenses
+        run: |
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          if [ ! -f $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager ]; then
+            cd /tmp
+            curl -sSLo cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q cmdtools.zip
+            mkdir -p $ANDROID_HOME/cmdline-tools/latest
+            mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+          fi
+          # Buildozer 1.5.0 looks for sdkmanager at the LEGACY path tools/bin.
+          mkdir -p $ANDROID_HOME/tools/bin
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager $ANDROID_HOME/tools/bin/avdmanager
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          ls -la $ANDROID_HOME/build-tools/35.0.0/aidl
+          $ANDROID_HOME/tools/bin/sdkmanager --version
+
+      # Create a signing keystore. Uses repo secrets if present (stable key,
+      # good for reinstalls/updates); otherwise generates a throwaway one so the
+      # build works out-of-the-box on a fresh repo with no setup.
+      - name: Prepare signing keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using keystore from repo secrets"
+            echo "$KEYSTORE_BASE64" | base64 -d > $HOME/casri.keystore
+            echo "ks_pass=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
+            echo "ks_alias=$KEY_ALIAS"        >> "$GITHUB_OUTPUT"
+          else
+            echo "No KEYSTORE_BASE64 secret — generating a throwaway keystore"
+            keytool -genkeypair -v \
+              -keystore $HOME/casri.keystore \
+              -alias casri \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass casri1234 -keypass casri1234 \
+              -dname "CN=Casri POS, O=Casri, C=SO"
+            echo "ks_pass=casri1234" >> "$GITHUB_OUTPUT"
+            echo "ks_alias=casri"    >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build APK (debug)
+        run: |
+          buildozer -v android debug
+
+      # Buildozer's debug APK is only v1-signed (jarsigner). Android 11+ refuses
+      # to install v1-only APKs → "App not installed". Re-sign with apksigner
+      # using v1+v2+v3 so it installs on modern phones.
+      - name: Re-sign debug APK (v1+v2+v3 for Android 11+)
+        run: |
+          APK=$(ls bin/*-debug.apk | head -1)
+          APKSIGNER=$HOME/.buildozer/android/platform/android-sdk/build-tools/35.0.0/apksigner
+          echo "Re-signing $APK"
+          $APKSIGNER sign \
+            --ks $HOME/casri.keystore \
+            --ks-key-alias "${{ steps.keystore.outputs.ks_alias }}" \
+            --ks-pass pass:"${{ steps.keystore.outputs.ks_pass }}" \
+            --key-pass pass:"${{ steps.keystore.outputs.ks_pass }}" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            "$APK"
+          echo "--- Signature verification ---"
+          $APKSIGNER verify --verbose "$APK"
+          # Give it a friendly name for the release
+          cp "$APK" "bin/CasriPOS-debug.apk"
+
+      - name: Show built APK
+        if: always()
+        run: ls -lh bin/ || true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: casripos-apk
+          path: bin/CasriPOS-debug.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      # GitHub Releases use storage separate from Actions artifacts, so the APK
+      # is downloadable even if the artifact quota is exhausted.
+      - name: Publish APK to GitHub Releases
+        if: success() || failure()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Casri POS build ${{ github.run_number }}
+          body: |
+            Auto-generated Casri POS APK from commit ${{ github.sha }}.
+            Download CasriPOS-debug.apk below and install it on the phone
+            (enable "Install unknown apps" for your browser/file manager first).
+          files: bin/CasriPOS-debug.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: false

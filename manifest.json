@@ -1,0 +1,19 @@
+{
+  "name": "Casri POS",
+  "short_name": "CasriPOS",
+  "description": "Point of Sale system for shops and restaurants",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1628",
+  "theme_color": "#1a6ef5",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
