@@ -17,6 +17,8 @@ NAVY = (10, 22, 40, 255)     # #0a1628
 BLUE = (26, 110, 245, 255)   # #1a6ef5
 CYAN = (0, 184, 217, 255)    # #00b8d9
 WHITE = (255, 255, 255, 255)
+BG = WHITE                   # icon background (was NAVY — user wanted it changed)
+BORDER = (224, 230, 240, 255)  # subtle light-grey edge so a white icon isn't borderless
 
 SS = 4  # super-sample for crisp anti-aliased edges
 
@@ -35,8 +37,10 @@ def s(v):
     return int(v * SS)
 
 
-# Navy rounded-square background
-rrect(d, (0, 0, W, W), s(96), NAVY)
+# Rounded-square background (white) + subtle light-grey rim so it isn't edgeless
+rrect(d, (0, 0, W, W), s(96), BG)
+d.rounded_rectangle((s(2), s(2), W - s(2), W - s(2)), radius=s(94),
+                    outline=BORDER, width=s(3))
 # Terminal body (blue)
 rrect(d, (s(96), s(128), s(416), s(368)), s(24), BLUE)
 # Display (white)
