@@ -23,6 +23,13 @@ version         = 1.0.0
 
 requirements = python3,kivy==2.3.0,android
 
+# Pin python-for-android to the known-good release. WITHOUT this, p4a uses its
+# latest master, which fails to compile Kivy 2.3.0 against NDK 25b
+# ("too few arguments to function call" in kivy/graphics/*.c). This is the exact
+# pin the working Isguul APK uses.
+p4a.fork = kivy
+p4a.branch = v2024.01.21
+
 orientation     = portrait
 fullscreen      = 0
 

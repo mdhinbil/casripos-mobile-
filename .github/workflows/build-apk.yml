@@ -7,6 +7,12 @@ on:
       - '**.md'
   workflow_dispatch:
 
+# Needed so softprops/action-gh-release can CREATE the GitHub Release. Without
+# this the default GITHUB_TOKEN is read-only → "Resource not accessible by
+# integration" (HTTP 403) when publishing the APK/AAB.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
