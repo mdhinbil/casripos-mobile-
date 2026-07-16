@@ -155,9 +155,15 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 .mobOnly{display:none}
 @media(max-width:900px){
   .posWrap{grid-template-columns:1fr;height:auto}
-  .posRight{position:fixed;bottom:0;left:0;right:0;max-height:60vh;border-radius:14px 14px 0 0;z-index:50;box-shadow:0 -10px 30px rgba(0,0,0,.25);transform:translateY(calc(100% - 56px));transition:transform .25s}
+  /* The cart is a bottom sheet. On a phone bottom:0 sits UNDER the system nav
+     bar, so the collapsed "Cart" handle was half-hidden. Peek = 56px header +
+     the nav-bar height (safe-area inset, or a 40px fallback for 3-button nav). */
+  .posRight{position:fixed;bottom:0;left:0;right:0;max-height:72vh;border-radius:14px 14px 0 0;z-index:50;box-shadow:0 -10px 30px rgba(0,0,0,.25);transform:translateY(calc(100% - 56px - max(env(safe-area-inset-bottom),40px)));transition:transform .25s}
   .posRight.open{transform:translateY(0)}
   .posCartH{cursor:pointer}
+  /* Lift the green Sell/Checkout button clear of the phone's bottom nav bar,
+     which was covering it. */
+  .posCheckout{padding-bottom:calc(13px + max(env(safe-area-inset-bottom),40px))}
   .mobOnly{display:inline-block}
 }
 
@@ -169,6 +175,11 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
   .sbOverlay{display:none}
   .sbOverlay.open{display:block}
   .tbMenu{display:block}
+  /* Push the top bar (hamburger + title) DOWN below the phone's status bar.
+     The WebView draws under the status bar, so without this the hamburger was
+     jammed against the clock/icons. Fallback 26px for phones that report no inset. */
+  .TB{height:auto;min-height:54px;padding-top:calc(max(env(safe-area-inset-top),26px));align-items:flex-start;padding-bottom:8px}
+  .TB .tbMenu,.TB .tbTitle,.TB .tbBtn{margin-top:2px}
   .kG{grid-template-columns:repeat(2,1fr)}
   .PA{padding:12px}
   .phT{font-size:17px}
