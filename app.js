@@ -252,6 +252,7 @@ function renderUser(){
   $("sbAv").textContent=n.split(" ").map(function(w){return w[0]||"";}).join("").slice(0,2).toUpperCase();
   $("sbNm").textContent=n;
   $("sbRl").textContent=CURRENT_USER.role==="admin"?T("Administrator","Maamulaha"):T("Cashier","Iibiyaha");
+  var so=$("sbOutTxt");if(so)so.textContent=T("Sign out","Ka bax");
 }
 
 // ── PAGE ROUTER ──────────────────────────────────────────────

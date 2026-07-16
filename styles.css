@@ -36,12 +36,15 @@ a{color:#1a6ef5;text-decoration:none}
 .sbIt:hover{background:rgba(255,255,255,.05);color:#fff}
 .sbIt.on{background:rgba(26,110,245,.2);color:#fff;border-left:3px solid #1a6ef5;padding-left:13px}
 .sbIc{width:18px;text-align:center;font-size:14px}
-.sbUsr{padding:11px 16px;padding-bottom:max(11px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sbUsr{padding:11px 16px;padding-bottom:max(11px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.sbUsrRow{display:flex;align-items:center;gap:8px}
 .sbAv{width:30px;height:30px;border-radius:50%;background:#1a6ef5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
 .sbNm{flex:1;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sbRl{font-size:10px;color:rgba(255,255,255,.5);white-space:nowrap}
-.sbOut{margin-left:auto;cursor:pointer;color:rgba(255,255,255,.6);background:rgba(255,255,255,.08);border:none;font-size:16px;width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center}
-.sbOut:hover{background:rgba(255,80,80,.5);color:#fff}
+/* Full-width, clearly-labelled Sign out button (was a tiny faint icon nobody saw) */
+.sbOut{width:100%;cursor:pointer;color:#fff;background:#d63b3b;border:none;font-size:13px;font-weight:700;padding:11px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 8px rgba(214,59,59,.35)}
+.sbOut:hover{background:#c22e2e}
+.sbOut:active{transform:translateY(1px)}
 .sbOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
 
 /* Topbar */
