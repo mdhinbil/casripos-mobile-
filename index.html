@@ -131,6 +131,40 @@
   </div>
 </div>
 
+<!-- In-app dialogs. Native confirm()/prompt()/alert() do NOTHING in the Android
+     WebView the APK runs in, so every confirm-guarded action (logout, delete,
+     add user…) silently failed. These modals replace them. -->
+<div class="MOv" id="M_confirm">
+  <div class="MB">
+    <div class="MT" id="cf_title">Are you sure?</div>
+    <div class="MS" id="cf_text"></div>
+    <div class="MF">
+      <button class="btn" onclick="igConfirmNo()" id="cf_no">Cancel</button>
+      <button class="btn btnP" onclick="igConfirmYes()" id="cf_yes">Yes</button>
+    </div>
+  </div>
+</div>
+
+<div class="MOv" id="M_prompt">
+  <div class="MB">
+    <div class="MT" id="pr_title">Enter value</div>
+    <div class="MS" id="pr_text"></div>
+    <div class="fi"><input type="text" id="pr_input" onkeydown="if(event.key==='Enter'){event.preventDefault();igPromptOk();}"></div>
+    <div class="MF">
+      <button class="btn" onclick="igPromptCancel()" id="pr_no">Cancel</button>
+      <button class="btn btnP" onclick="igPromptOk()" id="pr_ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="MOv" id="M_alert">
+  <div class="MB">
+    <div class="MT" id="al_title">Casri POS</div>
+    <div id="al_text" style="font-size:13px;color:#333;line-height:1.7;white-space:pre-wrap;margin-top:8px"></div>
+    <div class="MF"><button class="btn btnP" onclick="igAlertOk()" id="al_ok">OK</button></div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

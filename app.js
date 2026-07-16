@@ -121,7 +121,50 @@ function $(id){return document.getElementById(id);}
 function esc(s){return ((s||"")+"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function toast(msg){var t=$("toast");if(!t)return;t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove("show");},2200);}
 function openM(id){var m=$(id);if(m)m.classList.add("open");}
-function closeM(id){var m=$(id);if(m)m.classList.remove("open");}
+async function closeM(id){var m=$(id);if(m)m.classList.remove("open");}
+
+// ── IN-APP DIALOGS (native confirm/prompt/alert are IGNORED in the WebView) ──
+// Awaitable: use `if(!await igAsk(...))return;` and `var v=await igAskText(...)`.
+var _IG_YES=null,_IG_NO=null;
+function igConfirm(text,onYes,yesLabel,onNo){
+  _IG_YES=onYes||null;_IG_NO=onNo||null;
+  var t=$("cf_title");if(t)t.textContent=T("Are you sure?","Ma hubtaa?");
+  var x=$("cf_text");if(x)x.textContent=text||"";
+  var no=$("cf_no");if(no)no.textContent=T("Cancel","Jooji");
+  var y=$("cf_yes");if(y)y.textContent=yesLabel||T("Yes","Haa");
+  if(!$("M_confirm")){if(onYes)onYes();return;}
+  openM("M_confirm");
+}
+function igConfirmYes(){var cb=_IG_YES;_IG_YES=_IG_NO=null;closeM("M_confirm");if(typeof cb==="function")cb();}
+function igConfirmNo(){var cb=_IG_NO;_IG_YES=_IG_NO=null;closeM("M_confirm");if(typeof cb==="function")cb();}
+function igAsk(text,yesLabel){return new Promise(function(res){igConfirm(text,function(){res(true);},yesLabel,function(){res(false);});});}
+
+var _IG_POK=null,_IG_PNO=null;
+function igPrompt(text,defVal,onOk,onCancel){
+  _IG_POK=onOk||null;_IG_PNO=onCancel||null;
+  var t=$("pr_title");if(t)t.textContent=text||T("Enter value","Geli qiimaha");
+  var x=$("pr_text");if(x)x.textContent="";
+  var i=$("pr_input");if(i)i.value=defVal==null?"":String(defVal);
+  var no=$("pr_no");if(no)no.textContent=T("Cancel","Jooji");
+  var ok=$("pr_ok");if(ok)ok.textContent=T("OK","Haa");
+  if(!$("M_prompt")){if(onCancel)onCancel();return;}
+  openM("M_prompt");
+  if(i)setTimeout(function(){i.focus();i.select();},50);
+}
+function igPromptOk(){var i=$("pr_input");var v=i?i.value:"";var cb=_IG_POK;_IG_POK=_IG_PNO=null;closeM("M_prompt");if(typeof cb==="function")cb(v);}
+function igPromptCancel(){var cb=_IG_PNO;_IG_POK=_IG_PNO=null;closeM("M_prompt");if(typeof cb==="function")cb(null);}
+function igAskText(text,defVal){return new Promise(function(res){igPrompt(text,defVal,function(v){res(v);},function(){res(null);});});}
+
+var _IG_AOK=null;
+function igAlert(text,onOk,title){
+  _IG_AOK=onOk||null;
+  var t=$("al_title");if(t)t.textContent=title||"Casri POS";
+  var x=$("al_text");if(x)x.textContent=text||"";
+  var ok=$("al_ok");if(ok)ok.textContent=T("OK","Haa");
+  if(!$("M_alert")){if(onOk)onOk();return;}
+  openM("M_alert");
+}
+function igAlertOk(){var cb=_IG_AOK;_IG_AOK=null;closeM("M_alert");if(typeof cb==="function")cb();}
 function openSidebar(){$("sidebar").classList.add("open");$("sbOverlay").classList.add("open");}
 function closeSidebar(){$("sidebar").classList.remove("open");$("sbOverlay").classList.remove("open");}
 
@@ -150,8 +193,8 @@ function doLogin(){
 // the master Businesses list). Per-business admins are scoped to their bizId.
 function isSuperAdmin(){return CURRENT_USER&&CURRENT_USER.role==="admin"&&!CURRENT_USER.bizId;}
 function isBizAdmin(){return CURRENT_USER&&CURRENT_USER.role==="admin"&&!!CURRENT_USER.bizId;}
-function doLogout(){
-  if(!confirm(T("Sign out?","Ka bax?")))return;
+async function doLogout(){
+  if(!await igAsk(T("Sign out?","Ka bax?")))return;
   CURRENT_USER=null;CART=[];
   $("AP").classList.remove("open");
   $("LP").style.display="flex";
@@ -377,7 +420,7 @@ function changeQty(pid,delta){
   _refreshCart();
 }
 function removeFromCart(pid){CART=CART.filter(function(c){return c.id!==pid;});_refreshCart();}
-function _clearCart(){if(CART.length&&!confirm(T("Clear the cart?","Bacda nadiifi?")))return;CART=[];_refreshCart();}
+async function _clearCart(){if(CART.length&&!await igAsk(T("Clear the cart?","Bacda nadiifi?")))return;CART=[];_refreshCart();}
 function _toggleCart(){var c=$("posCart");if(c)c.classList.toggle("open");}
 function _refreshCart(){
   var cl=$("cartList");if(cl)cl.innerHTML=_renderCart();
@@ -539,9 +582,9 @@ function saveProduct(){
   toast(EDIT_PROD?T("Updated","La cusbooneysiiyay"):T("Added","Lagu daray"));
   renderPage("products");
 }
-function delProduct(pid){
+async function delProduct(pid){
   var p=PRODUCTS.find(function(x){return x.id===pid&&x.bizId===CURRENT_BIZ_ID;});if(!p)return;
-  if(!confirm(T("Delete ","Tirtir ")+p.name+"?"))return;
+  if(!await igAsk(T("Delete ","Tirtir ")+p.name+"?"))return;
   PRODUCTS=PRODUCTS.filter(function(x){return x.id!==pid;});
   _save("pos_prod",PRODUCTS);
   renderPage("products");
@@ -735,21 +778,21 @@ function saveBiz(){
 }
 // Quick-create a per-business admin from the Businesses page.
 // The new account is scoped to bid — they can only log into that one business.
-function openAddBizAdmin(bid){
+async function openAddBizAdmin(bid){
   var b=BIZ_LIST.find(function(x){return x.id===bid;});if(!b)return;
-  var name=prompt(T("Full name for "+b.name+" admin","Magaca buuxa ee maamulaha "+b.name));
+  var name=await igAskText(T("Full name for "+b.name+" admin","Magaca buuxa ee maamulaha "+b.name));
   if(!name)return;
-  var user=prompt(T("Username (used to sign in)","Magaca isticmaale"));
+  var user=await igAskText(T("Username (used to sign in)","Magaca isticmaale"));
   if(!user)return;
   if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username already taken","Magaca la qaatay"));return;}
-  var pass=prompt(T("Password","Sirta"));
+  var pass=await igAskText(T("Password","Sirta"));
   if(!pass)return;
   ACCOUNTS.push({id:"a"+Date.now(),name:name,username:user,password:pass,role:"admin",bizId:bid,active:true});
   _save("pos_acc",ACCOUNTS);
   renderPage("businesses");
   // Show the credentials clearly so the super-admin can share them — and
   // explain the workflow so it's obvious how the new admin logs in.
-  alert(
+  igAlert(
     T("Admin created for "+b.name+"!\n\n","Maamule loo abuuray "+b.name+"!\n\n")+
     T("Share these login details with the "+b.name+" admin:\n\n","La wadaag macluumaadkan maamulaha "+b.name+":\n\n")+
     "  "+T("Username","Magaca isticmaale")+": "+user+"\n"+
@@ -758,12 +801,12 @@ function openAddBizAdmin(bid){
       "Waxay furayaan isla URL-kan, qoraan macluumaadka isticmaalka, oo nidaamku si toos ah ayuu u geeyaa "+b.name+" oo kaliya — lama u baahna in la wareejiyo.")
   );
 }
-function delBiz(bid){
+async function delBiz(bid){
   if(BIZ_LIST.length<=1){toast(T("Keep at least one business","Hayso ugu yaraan hal ganacsi"));return;}
   var b=BIZ_LIST.find(function(x){return x.id===bid;});if(!b)return;
   var pCt=PRODUCTS.filter(function(p){return p.bizId===bid;}).length;
   var sCt=SALES.filter(function(s){return s.bizId===bid;}).length;
-  if(!confirm(T("Delete \""+b.name+"\"? This also removes its "+pCt+" product(s) and "+sCt+" sale(s). Cannot be undone.",
+  if(!await igAsk(T("Delete \""+b.name+"\"? This also removes its "+pCt+" product(s) and "+sCt+" sale(s). Cannot be undone.",
               "Tirtir \""+b.name+"\"? Tan waxay sidoo kale tirtirtaa "+pCt+" alaab iyo "+sCt+" iib.")))return;
   BIZ_LIST=BIZ_LIST.filter(function(x){return x.id!==bid;});
   PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==bid;});
@@ -808,12 +851,12 @@ PAGES.users=function(){
   return h;
 };
 function _togglePw(id,pw){var el=$("pw_"+id);if(!el)return;if(el.getAttribute("data-on")==="1"){el.textContent="••••••";el.setAttribute("data-on","0");}else{el.textContent=pw;el.setAttribute("data-on","1");}}
-function _newAccount(){
-  var name=prompt(T("Full name","Magaca buuxa"));if(!name)return;
-  var user=prompt(T("Username","Magaca isticmaale"));if(!user)return;
+async function _newAccount(){
+  var name=await igAskText(T("Full name","Magaca buuxa"));if(!name)return;
+  var user=await igAskText(T("Username","Magaca isticmaale"));if(!user)return;
   if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username taken","Magaca la qaatay"));return;}
-  var pass=prompt(T("Password","Sirta"));if(!pass)return;
-  var role=confirm(T("Make admin? (OK = admin, Cancel = cashier)","Maamulaha ka dhig?"))?"admin":"cashier";
+  var pass=await igAskText(T("Password","Sirta"));if(!pass)return;
+  var role=await igAsk(T("Make admin? (OK = admin, Cancel = cashier)","Maamulaha ka dhig?"))?"admin":"cashier";
   // Scope new accounts to a specific business. Default = active business.
   // Per-business admins always get their own business. Super-admin picks.
   var scope=CURRENT_USER.bizId||CURRENT_BIZ_ID;
@@ -821,7 +864,7 @@ function _newAccount(){
     // Number the businesses so the super-admin types "1", "2", etc. — no
     // typo risk and no accidental blank-equals-global pitfall.
     var list=BIZ_LIST.map(function(b,i){return (i+1)+") "+b.name;}).join("\n");
-    var ans=prompt(
+    var ans=await igAskText(
       T("Which business does this user belong to?\n\n","Ganacsi kee ayuu ka tirsanaa?\n\n")+
       list+"\n\n"+
       T("Type the number (or type 0 for super-admin / all-business access)","Qor lambarka (ama 0 maamulaha guud)"),
@@ -831,7 +874,7 @@ function _newAccount(){
     var n=parseInt(ans);
     if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khalad"));return;}
     if(n===0){
-      if(!confirm(T("This user will have super-admin access to ALL businesses. Are you sure?","Maamule guud oo ka shaqeeya DHAMMAAN ganacsiyada. Ma hubtaa?")))return;
+      if(!await igAsk(T("This user will have super-admin access to ALL businesses. Are you sure?","Maamule guud oo ka shaqeeya DHAMMAAN ganacsiyada. Ma hubtaa?")))return;
       scope="";
     } else {
       scope=BIZ_LIST[n-1].id;
@@ -844,11 +887,11 @@ function _newAccount(){
 }
 // Reassign an account to a different business — fixes accounts that were
 // accidentally created as super-admin (no bizId) but should be scoped.
-function reassignAccount(id){
+async function reassignAccount(id){
   if(!isSuperAdmin()){toast(T("Super-admin only","Maamulaha guud kaliya"));return;}
   var a=ACCOUNTS.find(function(x){return x.id===id;});if(!a)return;
   var list=BIZ_LIST.map(function(b,i){return (i+1)+") "+b.name;}).join("\n");
-  var ans=prompt(
+  var ans=await igAskText(
     T("Move ","U wareeji ")+a.name+T(" to which business?\n\n"," ganacsi kee?\n\n")+
     list+"\n\n"+T("Type the number (or 0 for super-admin)","Qor lambarka (ama 0 maamulaha guud)"),
     "1"
@@ -861,11 +904,11 @@ function reassignAccount(id){
   var scopeLbl=a.bizId?(BIZ_LIST.find(function(b){return b.id===a.bizId;})||{}).name:T("super-admin","maamule guud");
   toast(T("Moved → ","La wareejiyay → ")+scopeLbl);
 }
-function _delAcc(id){
+async function _delAcc(id){
   var a=ACCOUNTS.find(function(x){return x.id===id;});if(!a)return;
   // Per-business admin can only delete users in their own business
   if(!isSuperAdmin()&&a.bizId!==CURRENT_USER.bizId){toast(T("Not allowed","Lama ogoolayn"));return;}
-  if(!confirm(T("Delete user?","Tirtir?")))return;
+  if(!await igAsk(T("Delete user?","Tirtir?")))return;
   ACCOUNTS=ACCOUNTS.filter(function(x){return x.id!==id;});
   _save("pos_acc",ACCOUNTS);
   renderPage("users");
@@ -917,8 +960,8 @@ PAGES.settings=function(){
   h+="</div></div>";
   return h;
 };
-function _wipeProducts(){if(!confirm(T("Delete EVERY product in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN alaabta "+BIZ.name+"?")))return;PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});_save("pos_prod",PRODUCTS);toast(T("Products cleared","La nadiifyay"));renderPage("settings");}
-function _loadSamples(kind){
+async function _wipeProducts(){if(!await igAsk(T("Delete EVERY product in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN alaabta "+BIZ.name+"?")))return;PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});_save("pos_prod",PRODUCTS);toast(T("Products cleared","La nadiifyay"));renderPage("settings");}
+async function _loadSamples(kind){
   var menus={
     restaurant:[
       {name:"Beef Burger",cat:"Mains",price:8.50,stock:99,icon:"🍔"},
@@ -972,7 +1015,7 @@ function _loadSamples(kind){
     ]
   };
   var items=menus[kind];if(!items)return;
-  if(!confirm(T("Add "+items.length+" sample items to "+BIZ.name+"?","Ku dar "+items.length+" alaab tijaabo ah "+BIZ.name+"?")))return;
+  if(!await igAsk(T("Add "+items.length+" sample items to "+BIZ.name+"?","Ku dar "+items.length+" alaab tijaabo ah "+BIZ.name+"?")))return;
   var added=0;
   items.forEach(function(it){
     if(forBiz(PRODUCTS).find(function(p){return p.name.toLowerCase()===it.name.toLowerCase();}))return;
@@ -997,7 +1040,7 @@ function saveSettings(){
   renderUser();
   toast(T("Saved","La keydiyay"));
 }
-function _wipeSales(){if(!confirm(T("Delete ALL sales in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN iibka "+BIZ.name+"?")))return;SALES=SALES.filter(function(s){return s.bizId!==CURRENT_BIZ_ID;});_save("pos_sales",SALES);toast(T("Cleared","La nadiifyay"));renderPage("settings");}
+async function _wipeSales(){if(!await igAsk(T("Delete ALL sales in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN iibka "+BIZ.name+"?")))return;SALES=SALES.filter(function(s){return s.bizId!==CURRENT_BIZ_ID;});_save("pos_sales",SALES);toast(T("Cleared","La nadiifyay"));renderPage("settings");}
 
 // ── BOOT ─────────────────────────────────────────────────────
 (function(){
