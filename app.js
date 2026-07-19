@@ -47,6 +47,10 @@ var BIZ=new Proxy({},{
 });
 function _saveBiz(){_save("pos_biz_list",BIZ_LIST);_save("pos_current_biz",CURRENT_BIZ_ID);}
 function switchBiz(bid){
+  // Only the super-admin may change the active business. Without this guard a
+  // business-scoped user could switch to another business and read its products,
+  // sales and takings.
+  if(!isSuperAdmin()){toast(T("Not allowed","Lama ogoolayn"));return;}
   if(!BIZ_LIST.find(function(b){return b.id===bid;}))return;
   CURRENT_BIZ_ID=bid;
   _save("pos_current_biz",CURRENT_BIZ_ID);
@@ -260,6 +264,18 @@ var PAGES={};
 function goTo(id){PAGE=id;buildNav();renderPage(id);}
 function renderPage(id){
   var area=$("PA");if(!area)return;
+  // SCOPE GUARD — a business-scoped user's active business can never drift to
+  // another business (stale saved state, a switch attempt, a shared device).
+  // Every page reads data through forBiz(CURRENT_BIZ_ID), so pinning it here
+  // keeps one business's products/sales/takings invisible to another's staff.
+  if(CURRENT_USER&&CURRENT_USER.bizId&&CURRENT_BIZ_ID!==CURRENT_USER.bizId){
+    if(BIZ_LIST.find(function(b){return b.id===CURRENT_USER.bizId;})){
+      CURRENT_BIZ_ID=CURRENT_USER.bizId;
+      _save("pos_current_biz",CURRENT_BIZ_ID);
+    }
+  }
+  // Businesses page is super-admin only — block direct navigation, not just the nav link.
+  if(id==="businesses"&&!isSuperAdmin())id="dashboard";
   var fn=PAGES[id]||PAGES.dashboard;
   try{
     var html=fn();
@@ -825,7 +841,11 @@ PAGES.users=function(){
   if(CURRENT_USER.role!=="admin")return "<div class=\"empty\">"+T("Admin only","Maamulaha kaliya")+"</div>";
   // Super-admin sees ALL accounts across every business; per-business admin
   // only sees accounts for their own business (plus themselves).
-  var visible=isSuperAdmin()?ACCOUNTS:ACCOUNTS.filter(function(a){return !a.bizId||a.bizId===CURRENT_USER.bizId;});
+  // A business admin sees ONLY their own business's accounts. The old filter also
+  // let through every account with a blank bizId — which meant each business admin
+  // could see the master super-admin row AND reveal its password with the eye
+  // button. Never show unscoped accounts to a scoped admin.
+  var visible=isSuperAdmin()?ACCOUNTS:ACCOUNTS.filter(function(a){return !!a.bizId&&a.bizId===CURRENT_USER.bizId;});
   var scopeNote=isSuperAdmin()?T("All businesses","Dhammaan ganacsiyada"):esc(BIZ.name);
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Users","Isticmaalayaal")+"</div><div class=\"phS\">"+scopeNote+" &middot; "+visible.length+" "+T("accounts","akoon")+"</div></div>";
   h+="<div class=\"phA\"><button class=\"btn btnP\" onclick=\"_newAccount()\">+ "+T("Add user","Ku dar")+"</button></div></div>";
