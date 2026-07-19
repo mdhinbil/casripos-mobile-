@@ -473,8 +473,109 @@ function _renderCartSummary(){
   h+="</div>";
   return h;
 }
+// ── PAYMENT ──────────────────────────────────────────────────
+// Checkout now asks HOW the customer is paying before recording the sale:
+// cash (with change owed), card, or mobile money (ZAAD / EVC Plus / eDahab).
+var PAY_METHOD="cash";
+function payLabel(m){
+  return m==="card"?T("Card","Kaadh")
+       : m==="mobile"?T("Mobile money","Lacag mobile")
+       : T("Cash","Cash");
+}
+function setPayMethod(m){
+  PAY_METHOD=m;
+  var box=$("pay_methods");
+  if(box){
+    var bs=box.querySelectorAll(".payM");
+    for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i].getAttribute("data-m")===m);
+  }
+  var cash=$("pay_cash_box"),ref=$("pay_ref_box"),pw=$("pay_prov_wrap");
+  if(cash)cash.style.display=(m==="cash")?"block":"none";
+  if(ref)ref.style.display=(m==="cash")?"none":"block";
+  if(pw)pw.style.display=(m==="mobile")?"block":"none";   // provider list is mobile-money only
+  _payChange();
+}
+// Live change calculation. Amounts are typed in the DISPLAY currency, so convert
+// back to the USD base the cart totals use before comparing.
+function _payFx(){
+  if(CURRENCY==="SOS")return FX_USD_TO_SOS;
+  if(CURRENCY==="SLSH")return FX_USD_TO_SLSH;
+  return 1;
+}
+function _payChange(){
+  var el=$("pay_change"),row=$("pay_change_row");
+  if(!el)return;
+  var due=_cartTotals().tot;
+  var raw=parseFloat(($("pay_recv")||{}).value);
+  if(isNaN(raw)||raw<=0){el.textContent="—";if(row)row.classList.remove("short");return;}
+  var recvUSD=raw/_payFx();
+  var diff=recvUSD-due;
+  if(diff>=0){el.textContent=money(diff);if(row)row.classList.remove("short");}
+  else{el.textContent="-"+money(Math.abs(diff));if(row)row.classList.add("short");}
+}
+function openPayModal(){
+  var t=_cartTotals();
+  var lbl=$("pay_lbl");if(lbl)lbl.textContent=T("Amount due","Lacagta la bixinayo");
+  var amt=$("pay_amt");if(amt)amt.textContent=money(t.tot);
+  var ttl=$("pay_t");if(ttl)ttl.textContent=T("Payment","Lacag bixinta");
+  // bilingual labels
+  var m={payM_cash:[T("Cash","Cash"),0],payM_card:[T("Card","Kaadh"),0],payM_mobile:[T("Mobile","Mobile"),0]};
+  Object.keys(m).forEach(function(k){var e=$(k);if(e)e.textContent=m[k][0];});
+  var rl=$("pay_recv_l");if(rl)rl.textContent=T("Amount received","Lacagta la helay");
+  var cl=$("pay_change_l");if(cl)cl.textContent=T("Change","Baaqiga");
+  var pl=$("pay_prov_l");if(pl)pl.textContent=T("Provider","Adeeg bixiyaha");
+  var fl=$("pay_ref_l");if(fl)fl.textContent=T("Reference (optional)","Tixraac (ikhtiyaari)");
+  var cx=$("pay_cancel");if(cx)cx.textContent=T("Cancel","Jooji");
+  var dn=$("pay_done");if(dn)dn.textContent=T("Complete sale","Dhammee iibka");
+  var rv=$("pay_recv");if(rv)rv.value="";
+  var rf=$("pay_ref");if(rf)rf.value="";
+  // Quick cash buttons: exact amount, then sensible round-ups in the display currency
+  var q=$("pay_quick");
+  if(q){
+    var due=t.tot*_payFx();
+    var opts=[due];
+    [1,5,10,20,50,100].forEach(function(step){
+      var v=Math.ceil(due/step)*step;
+      if(v>due&&opts.indexOf(v)<0&&opts.length<5)opts.push(v);
+    });
+    q.innerHTML=opts.map(function(v,i){
+      var lab=i===0?T("Exact","Saxda"):(CURRENCY==="USD"?"$":"")+Math.round(v).toLocaleString();
+      return "<button type=\"button\" onclick=\"_paySetRecv("+v+")\">"+lab+"</button>";
+    }).join("");
+  }
+  setPayMethod("cash");
+  openM("M_pay");
+}
+function _paySetRecv(v){
+  var rv=$("pay_recv");
+  if(rv){rv.value=(Math.round(v*100)/100);_payChange();}
+}
+function confirmPayment(){
+  var t=_cartTotals();
+  var paid=null,change=0,ref="",prov="";
+  if(PAY_METHOD==="cash"){
+    var raw=parseFloat(($("pay_recv")||{}).value);
+    if(!isNaN(raw)&&raw>0){
+      paid=raw/_payFx();
+      if(paid+1e-9<t.tot){toast(T("Amount received is less than the total","Lacagta la helay way ka yar tahay wadarta"));return;}
+      change=paid-t.tot;
+    } else {
+      paid=t.tot;   // no amount typed → assume exact
+    }
+  } else {
+    ref=(($("pay_ref")||{}).value||"").trim();
+    if(PAY_METHOD==="mobile")prov=(($("pay_prov")||{}).value||"").trim();
+    paid=t.tot;
+  }
+  closeM("M_pay");
+  _completeSale({method:PAY_METHOD,paid:paid,change:change,ref:ref,provider:prov});
+}
 function checkout(){
   if(!CART.length){toast(T("Add items first","Marka hore alaab ku dar"));return;}
+  openPayModal();
+}
+function _completeSale(pay){
+  if(!CART.length)return;
   var t=_cartTotals();
   var sale={
     id:"s"+Date.now(),
@@ -486,7 +587,13 @@ function checkout(){
     currency:CURRENCY,
     bizType:BIZ.type,
     tableNo:_bizUsesTables()?TABLE_NO:"",
-    orderType:_bizUsesTables()?ORDER_TYPE:""
+    orderType:_bizUsesTables()?ORDER_TYPE:"",
+    // How it was paid — cash / card / mobile (+ change owed, provider, reference)
+    payMethod:(pay&&pay.method)||"cash",
+    paid:(pay&&pay.paid)||t.tot,
+    change:(pay&&pay.change)||0,
+    payProvider:(pay&&pay.provider)||"",
+    payRef:(pay&&pay.ref)||""
   };
   // Decrement stock
   CART.forEach(function(c){
@@ -502,36 +609,76 @@ function checkout(){
   _refreshCart();
 }
 
-function _showReceipt(sale){
-  var w=42;
-  function center(s){var p=Math.max(0,Math.floor((w-s.length)/2));return Array(p+1).join(" ")+s;}
-  function line(a,b){var p=Math.max(1,w-a.length-b.length);return a+Array(p+1).join(" ")+b;}
+// Build the receipt as a fixed-width monospace slip (32 cols = standard 58mm
+// thermal paper, and narrow enough to fit a phone without sideways scrolling).
+// Long product names wrap onto their own lines instead of being truncated, and
+// each item shows "qty x unit price" so the maths is checkable.
+function _receiptText(sale){
+  var w=32;
+  function pad(n){return n>0?new Array(n+1).join(" "):"";}
+  function center(s){s=String(s||"");if(s.length>=w)return s.slice(0,w);return pad(Math.floor((w-s.length)/2))+s;}
+  function line(a,b){a=String(a||"");b=String(b||"");return a+pad(Math.max(1,w-a.length-b.length))+b;}
+  function wrap(s,max){
+    s=String(s||"").trim();var out=[];
+    while(s.length>max){
+      var cut=s.lastIndexOf(" ",max);
+      if(cut<=0)cut=max;
+      out.push(s.slice(0,cut));
+      s=s.slice(cut).replace(/^\s+/,"");
+    }
+    if(s)out.push(s);
+    return out.length?out:[""];
+  }
+  var d=new Date(sale.date);
+  var when=d.toLocaleDateString()+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+
   var h="";
-  h+=center(BIZ.name||"Casri POS")+"\n";
-  if(BIZ.addr)h+=center(BIZ.addr)+"\n";
+  h+=center((BIZ.name||"Casri POS").toUpperCase())+"\n";
+  if(BIZ.addr)wrap(BIZ.addr,w).forEach(function(l){h+=center(l)+"\n";});
   if(BIZ.phone)h+=center(BIZ.phone)+"\n";
-  h+="-".repeat(w)+"\n";
-  h+=line(T("Receipt #","Kaadhka #")+sale.id.slice(-6), new Date(sale.date).toLocaleString())+"\n";
-  h+=line(T("Cashier","Iibiyaha"),sale.cashier)+"\n";
-  if(sale.tableNo)h+=line(T("Table","Miis"),"#"+sale.tableNo)+"\n";
-  if(sale.orderType)h+=line(T("Order","Dalbka"),sale.orderType)+"\n";
-  h+="-".repeat(w)+"\n";
-  sale.items.forEach(function(it){
-    h+=line(it.name.slice(0,24)+" x"+it.qty,money(it.price*it.qty))+"\n";
+  h+="\n"+"=".repeat(w)+"\n";
+  h+=line(T("Receipt","Kaadhka"),"#"+String(sale.id).slice(-6))+"\n";
+  h+=line(T("Date","Taariikh"),when)+"\n";
+  h+=line(T("Cashier","Iibiyaha"),sale.cashier||"-")+"\n";
+  if(sale.tableNo)h+=line(T("Table","Miiska"),"#"+sale.tableNo)+"\n";
+  if(sale.orderType)h+=line(T("Order","Dalabka"),sale.orderType)+"\n";
+  h+="=".repeat(w)+"\n";
+  (sale.items||[]).forEach(function(it){
+    wrap(it.name,w).forEach(function(l){h+=l+"\n";});
+    h+=line("  "+it.qty+" x "+money(it.price),money(it.price*it.qty))+"\n";
   });
   h+="-".repeat(w)+"\n";
   h+=line(T("Subtotal","Wadarta"),money(sale.subtotal))+"\n";
-  if(sale.tax>0)h+=line(T("Tax","Canshuur"),money(sale.tax))+"\n";
+  if(sale.tax>0)h+=line(T("Tax","Canshuurta"),money(sale.tax))+"\n";
+  h+="=".repeat(w)+"\n";
   h+=line(T("TOTAL","WADARTA"),money(sale.total))+"\n";
+  h+="=".repeat(w)+"\n";
+  // How it was paid — plus change owed for cash, or the provider/ref for mobile & card
+  var pm=sale.payMethod||"cash";
+  h+=line(T("Paid by","Lacag bixin"),payLabel(pm)+(pm==="mobile"&&sale.payProvider?" ("+sale.payProvider+")":""))+"\n";
+  if(pm==="cash"&&sale.paid>sale.total){
+    h+=line(T("Received","La helay"),money(sale.paid))+"\n";
+    h+=line(T("Change","Baaqiga"),money(sale.change||0))+"\n";
+  }
+  if(sale.payRef)h+=line(T("Ref","Tixraac"),String(sale.payRef).slice(0,20))+"\n";
   h+="\n"+center(T("Thank you!","Mahadsanid!"))+"\n";
-  $("rec_body").textContent=h;
+  return h;
+}
+function _showReceipt(sale){
+  $("rec_body").textContent=_receiptText(sale);
   openM("M_rec");
 }
 function printReceipt(){
-  var w=window.open("","_blank","width=320,height=600");
-  if(!w){toast("Pop-up blocked");return;}
-  w.document.write("<pre style=\"font-family:monospace;font-size:11px;line-height:1.6\">"+esc($("rec_body").textContent)+"</pre>");
-  w.document.close();w.focus();w.print();
+  // Print IN PAGE rather than via window.open — popups are blocked in the
+  // Android WebView the APK runs in, so the old version silently did nothing.
+  // #printArea is hidden on screen and is the only thing shown when printing.
+  var txt=$("rec_body").textContent||"";
+  if(!txt){toast(T("Nothing to print","Waxba lama daabici karo"));return;}
+  var pa=$("printArea");
+  if(!pa){pa=document.createElement("pre");pa.id="printArea";document.body.appendChild(pa);}
+  pa.textContent=txt;
+  try{window.print();}
+  catch(e){toast(T("Printing not available here","Daabacaadu halkan ma shaqeyso"));}
 }
 
 // ============================================================
@@ -617,9 +764,9 @@ PAGES.sales=function(){
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Sales History","Taariikhda Iibka")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+bizSales.length+" "+T("transactions","macaamil")+"</div></div></div>";
   var head="<th>"+T("Receipt","Kaadh")+"</th><th>"+T("Date","Taariikh")+"</th>";
   if(showTable)head+="<th>"+T("Table / Order","Miis / Dalbka")+"</th>";
-  head+="<th>"+T("Items","Alaab")+"</th><th>"+T("Cashier","Iibiyaha")+"</th><th>"+T("Total","Wadarta")+"</th><th></th>";
+  head+="<th>"+T("Items","Alaab")+"</th><th>"+T("Paid by","Lacag bixin")+"</th><th>"+T("Cashier","Iibiyaha")+"</th><th>"+T("Total","Wadarta")+"</th><th></th>";
   h+="<div class=\"box\"><table><thead><tr>"+head+"</tr></thead><tbody>";
-  var colspan=showTable?7:6;
+  var colspan=showTable?8:7;
   if(!bizSales.length){h+="<tr><td colspan=\""+colspan+"\"><div class=\"empty\"><div class=\"emIc\">&#128181;</div>"+T("No sales yet","Iib lama jirin weli")+"</div></td></tr>";}
   else{
     bizSales.slice(0,200).forEach(function(s){
@@ -632,6 +779,10 @@ PAGES.sales=function(){
         h+="<td><div style=\"font-weight:700\">"+tbl+"</div><div style=\"font-size:10px;color:#999\">"+esc(ot)+"</div></td>";
       }
       h+="<td>"+itemCt+"</td>";
+      var _pm=s.payMethod||"cash";
+      var _pc={cash:"bg",card:"bb",mobile:"ba"}[_pm]||"bgr";
+      h+="<td><span class=\"bdg "+_pc+"\">"+esc(payLabel(_pm))+"</span>"+
+         (s.payProvider?"<div style=\"font-size:10px;color:#5c6b82;margin-top:2px\">"+esc(s.payProvider)+"</div>":"")+"</td>";
       h+="<td>"+esc(s.cashier||"-")+"</td>";
       h+="<td><strong style=\"color:#1a6ef5\">"+money(s.total)+"</strong></td>";
       h+="<td><button class=\"btn\" onclick=\"_viewSale('"+s.id+"')\">&#128424;</button></td></tr>";
@@ -669,6 +820,32 @@ PAGES.reports=function(){
   h+=kpi(T("Products sold","Alaab la iibiyay"),topProds.reduce(function(a,p){return a+p.q;},0),"#6554c0",null);
   h+=kpi(T("SKUs","SKU"),bizProducts.length,"#ff991f",null);
   h+="</div>";
+  // Takings split by how customers paid — tells you how much cash should be in
+  // the drawer versus what landed in the bank / mobile-money account.
+  var byPay={cash:{n:0,v:0},card:{n:0,v:0},mobile:{n:0,v:0}};
+  bizSales.forEach(function(s){
+    var m=s.payMethod||"cash";
+    if(!byPay[m])byPay[m]={n:0,v:0};
+    byPay[m].n++;byPay[m].v+=s.total;
+  });
+  h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128179; "+T("Payment methods","Siyaabaha lacag bixinta")+"</div></div><div class=\"bB\">";
+  if(!bizSales.length){h+="<div class=\"empty\">"+T("No sales yet","Iib ma jiro weli")+"</div>";}
+  else{
+    h+="<div style=\"display:flex;border-radius:6px;overflow:hidden;height:10px;margin-bottom:12px;background:#eef1f5\">";
+    [["cash","#36b37e"],["card","#1a6ef5"],["mobile","#00b8d9"]].forEach(function(p){
+      var pct=totalRev>0?(byPay[p[0]].v/totalRev*100):0;
+      if(pct>0)h+="<div style=\"width:"+pct+"%;background:"+p[1]+"\"></div>";
+    });
+    h+="</div><table><thead><tr><th>"+T("Method","Habka")+"</th><th>"+T("Sales","Iibab")+"</th><th style=\"text-align:right\">"+T("Amount","Lacagta")+"</th><th style=\"text-align:right\">%</th></tr></thead><tbody>";
+    [["cash","#36b37e"],["card","#1a6ef5"],["mobile","#00b8d9"]].forEach(function(p){
+      var d=byPay[p[0]],pct=totalRev>0?Math.round(d.v/totalRev*100):0;
+      h+="<tr><td><span style=\"display:inline-block;width:9px;height:9px;border-radius:2px;background:"+p[1]+";margin-right:7px\"></span><strong>"+payLabel(p[0])+"</strong></td>";
+      h+="<td>"+d.n+"</td><td style=\"text-align:right;font-weight:700\">"+money(d.v)+"</td>";
+      h+="<td style=\"text-align:right;color:#5c6b82\">"+pct+"%</td></tr>";
+    });
+    h+="</tbody></table>";
+  }
+  h+="</div></div>";
   // Daily chart
   h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128202; "+T("Last 14 days","14-kii maalmood ee dambeeyay")+"</div></div><div class=\"bB\">";
   if(!days.length){h+="<div class=\"empty\">"+T("No data yet","Xog ma jirto weli")+"</div>";}

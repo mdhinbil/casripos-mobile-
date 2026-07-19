@@ -120,12 +120,67 @@
   </div>
 </div>
 
+<!-- Payment Modal — choose Cash / Card / Mobile money before completing the sale -->
+<div class="MOv" id="M_pay">
+  <div class="MB">
+    <button class="MC" onclick="closeM('M_pay')">&#10005;</button>
+    <div class="MT" id="pay_t">Payment</div>
+    <div class="payTot">
+      <span id="pay_lbl">Amount due</span>
+      <strong id="pay_amt">$0.00</strong>
+    </div>
+
+    <div class="payMethods" id="pay_methods">
+      <button type="button" class="payM on" data-m="cash"   onclick="setPayMethod('cash')">
+        <span class="ic">&#128181;</span><span class="lb" id="payM_cash">Cash</span></button>
+      <button type="button" class="payM"    data-m="card"   onclick="setPayMethod('card')">
+        <span class="ic">&#128179;</span><span class="lb" id="payM_card">Card</span></button>
+      <button type="button" class="payM"    data-m="mobile" onclick="setPayMethod('mobile')">
+        <span class="ic">&#128241;</span><span class="lb" id="payM_mobile">Mobile</span></button>
+    </div>
+
+    <!-- CASH: amount received + change -->
+    <div id="pay_cash_box">
+      <div class="fi"><label id="pay_recv_l">Amount received</label>
+        <input type="number" id="pay_recv" step="0.01" min="0" inputmode="decimal"
+               oninput="_payChange()" placeholder="0.00"></div>
+      <div class="payQuick" id="pay_quick"></div>
+      <div class="payChange" id="pay_change_row">
+        <span id="pay_change_l">Change</span><strong id="pay_change">—</strong>
+      </div>
+    </div>
+
+    <!-- CARD / MOBILE: provider + reference -->
+    <div id="pay_ref_box" style="display:none">
+      <div class="fi" id="pay_prov_wrap"><label id="pay_prov_l">Provider</label>
+        <select id="pay_prov">
+          <option value="ZAAD">ZAAD</option>
+          <option value="EVC Plus">EVC Plus</option>
+          <option value="eDahab">eDahab</option>
+          <option value="Sahal">Sahal</option>
+          <option value="Other">Other</option>
+        </select></div>
+      <div class="fi"><label id="pay_ref_l">Reference (optional)</label>
+        <input type="text" id="pay_ref" placeholder="Transaction / approval no."></div>
+    </div>
+
+    <div class="MF">
+      <button class="btn" onclick="closeM('M_pay')" id="pay_cancel">Cancel</button>
+      <button class="btn btnG" onclick="confirmPayment()" id="pay_done">Complete sale</button>
+    </div>
+  </div>
+</div>
+
 <!-- Receipt Modal -->
 <div class="MOv" id="M_rec">
   <div class="MB">
     <button class="MC" onclick="closeM('M_rec')">&#10005;</button>
     <div class="MT">Receipt</div>
-    <div id="rec_body" style="font-family:monospace;font-size:11px;line-height:1.7;background:#fafbfd;padding:14px;border:1px dashed #c9d3e3;border-radius:8px;margin:14px 0"></div>
+    <!-- white-space:pre is essential — the receipt is aligned with spaces and
+         newlines, and without it every line collapses into one run-on block.
+         text-size-adjust stops the Android WebView inflating the font and
+         breaking the monospace column alignment. -->
+    <div id="rec_body" style="font-family:ui-monospace,'Courier New',monospace;font-size:12px;line-height:1.55;background:#fafbfd;padding:14px;border:1px dashed #c9d3e3;border-radius:8px;margin:14px 0;white-space:pre;overflow-x:auto;-webkit-text-size-adjust:100%;text-size-adjust:100%;color:#0a1628"></div>
     <div class="MF">
       <button class="btn" onclick="closeM('M_rec')">Close</button>
       <button class="btn btnP" onclick="printReceipt()">&#128424; Print</button>

@@ -119,20 +119,25 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 /* ═══ POS TERMINAL ═════════════════════════════════════════════ */
 .posWrap{display:grid;grid-template-columns:1fr 360px;gap:14px;height:calc(100vh - 90px)}
 .posLeft{display:flex;flex-direction:column;gap:11px;overflow:hidden}
-.posSearch{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:11px;background:#fff;border:1px solid #e3e6eb;border-radius:10px}
+.posSearch{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:11px;background:#fff;border:1px solid #d8e0ea;border-radius:10px;box-shadow:0 1px 2px rgba(10,22,40,.04)}
 .posSearch input{flex:1;min-width:160px}
-.catChip{padding:5px 11px;border-radius:14px;background:#f0f2f5;color:#444;border:1.5px solid transparent;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap}
-.catChip.on{background:#1a6ef5;color:#fff;border-color:#1a6ef5}
-.prodGrid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px;padding-right:4px}
-.prodC{background:#fff;border:1.5px solid #e3e6eb;border-radius:10px;padding:11px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:6px}
-.prodC:hover{border-color:#1a6ef5;box-shadow:0 4px 10px rgba(26,110,245,.12);transform:translateY(-1px)}
-.prodC .pIc{font-size:28px;text-align:center;margin-bottom:2px}
-.prodC .pNm{font-size:12px;font-weight:700;color:#0a1628;line-height:1.3}
-.prodC .pCt{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.03em}
-.prodC .pPr{font-size:13px;font-weight:800;color:#1a6ef5;margin-top:auto}
-.prodC .pStk{font-size:10px;color:#36b37e;font-weight:700}
-.prodC .pStk.low{color:#bf2600}
-.prodC.out{opacity:.55;cursor:not-allowed}
+/* Bigger tap target + darker label so categories are readable at a glance */
+.catChip{padding:7px 13px;border-radius:16px;background:#eaeef4;color:#33415c;border:1.5px solid #dbe2ec;cursor:pointer;font-size:11.5px;font-weight:700;white-space:nowrap}
+.catChip:hover{background:#dde5f0;border-color:#c5d9f6}
+.catChip.on{background:#1a6ef5;color:#fff;border-color:#1a6ef5;box-shadow:0 2px 6px rgba(26,110,245,.3)}
+.prodGrid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;padding-right:4px}
+/* Product tiles: soft blue tint instead of flat white, so they read as tappable
+   buttons against the page and every line stays high-contrast. */
+.prodC{background:linear-gradient(180deg,#f8fbff 0%,#e8f1ff 100%);border:1.5px solid #c5d9f6;border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(10,22,40,.05)}
+.prodC:hover{border-color:#1a6ef5;background:linear-gradient(180deg,#ffffff 0%,#dbe9ff 100%);box-shadow:0 6px 14px rgba(26,110,245,.20);transform:translateY(-2px)}
+.prodC:active{transform:translateY(0);box-shadow:0 2px 6px rgba(26,110,245,.18)}
+.prodC .pIc{font-size:30px;text-align:center;margin-bottom:2px;line-height:1.1}
+.prodC .pNm{font-size:12.5px;font-weight:800;color:#0a1628;line-height:1.3}
+.prodC .pCt{font-size:9.5px;color:#5c6b82;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.prodC .pPr{font-size:15px;font-weight:800;color:#1152cc;margin-top:auto;letter-spacing:-.01em}
+.prodC .pStk{font-size:10.5px;color:#1a7a4f;font-weight:800}
+.prodC .pStk.low{color:#c62f16}
+.prodC.out{opacity:.5;cursor:not-allowed;background:#eef1f5;border-color:#d7dde6}
 
 .posRight{background:#fff;border:1px solid #e3e6eb;border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
 .posCartH{padding:13px 16px;background:#0a1628;color:#fff;display:flex;align-items:center;justify-content:space-between}
@@ -142,15 +147,15 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 .posCartList{flex:1;overflow-y:auto;padding:9px 11px}
 .cartRow{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #f0f2f5}
 .cartRow:last-child{border-bottom:none}
-.cartRow .cNm{flex:1;font-size:12px;font-weight:700;color:#0a1628;line-height:1.3}
-.cartRow .cPr{font-size:10px;color:#999}
+.cartRow .cNm{flex:1;font-size:12.5px;font-weight:800;color:#0a1628;line-height:1.3}
+.cartRow .cPr{font-size:10.5px;color:#5c6b82;font-weight:600}
 .qtyBtn{width:24px;height:24px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-weight:700;color:#0a1628;display:flex;align-items:center;justify-content:center}
 .qtyBtn:hover{background:#1a6ef5;color:#fff;border-color:#1a6ef5}
 .qtyVal{min-width:24px;text-align:center;font-weight:700;font-size:12px}
 .cartTot{font-size:13px;font-weight:800;color:#1a6ef5;text-align:right;min-width:60px}
 .cartRm{background:none;border:none;color:#bf2600;font-size:14px;cursor:pointer}
-.posSum{padding:12px 16px;background:#f5f7fa;border-top:1px solid #e3e6eb}
-.sumRow{display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:5px}
+.posSum{padding:12px 16px;background:#f2f6fc;border-top:1px solid #dbe4f0}
+.sumRow{display:flex;justify-content:space-between;font-size:12.5px;color:#44536b;font-weight:600;margin-bottom:5px}
 .sumRow.tot{font-size:16px;font-weight:800;color:#0a1628;margin-top:8px;padding-top:8px;border-top:1px solid #e3e6eb}
 .posCheckout{padding:13px 16px;background:#fff;border-top:1px solid #e3e6eb}
 .posCheckout button{width:100%;padding:13px;font-size:14px;font-weight:800}
@@ -201,3 +206,37 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 @media(max-width:400px){
   .kG{grid-template-columns:1fr}
 }
+
+/* ═══ PRINT — receipt only ═════════════════════════════════════ */
+/* #printArea is filled by printReceipt() and is the ONLY thing that prints.
+   Printing in-page instead of via a popup window, which the app's WebView blocks. */
+#printArea{display:none}
+@media print{
+  body > *{display:none !important}
+  #printArea{display:block !important;font-family:ui-monospace,'Courier New',monospace;
+    font-size:12px;line-height:1.5;white-space:pre;margin:0;padding:0;color:#000}
+}
+
+/* ═══ PAYMENT ══════════════════════════════════════════════════ */
+.payTot{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  background:linear-gradient(180deg,#f8fbff,#e8f1ff);border:1.5px solid #c5d9f6;
+  border-radius:11px;padding:14px 16px;margin:14px 0}
+.payTot span{font-size:12px;font-weight:700;color:#44536b;text-transform:uppercase;letter-spacing:.04em}
+.payTot strong{font-size:26px;font-weight:800;color:#0a1628;letter-spacing:-.02em}
+.payMethods{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
+.payM{display:flex;flex-direction:column;align-items:center;gap:5px;padding:13px 6px;
+  border-radius:11px;border:2px solid #dbe2ec;background:#fff;cursor:pointer;transition:all .15s}
+.payM .ic{font-size:22px;line-height:1}
+.payM .lb{font-size:12px;font-weight:700;color:#33415c}
+.payM:hover{border-color:#c5d9f6;background:#f6faff}
+.payM.on{border-color:#1a6ef5;background:#eaf2ff;box-shadow:0 3px 10px rgba(26,110,245,.22)}
+.payM.on .lb{color:#1152cc}
+.payQuick{display:flex;gap:7px;flex-wrap:wrap;margin:-4px 0 12px}
+.payQuick button{padding:7px 12px;border-radius:8px;border:1.5px solid #dbe2ec;background:#f4f7fb;
+  font-size:12px;font-weight:700;color:#33415c;cursor:pointer}
+.payQuick button:hover{border-color:#1a6ef5;color:#1152cc;background:#eaf2ff}
+.payChange{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:12px 14px;border-radius:10px;background:#f2f6fc;border:1px solid #dbe4f0}
+.payChange span{font-size:12px;font-weight:700;color:#44536b;text-transform:uppercase;letter-spacing:.04em}
+.payChange strong{font-size:20px;font-weight:800;color:#1a7a4f}
+.payChange.short strong{color:#c62f16}
