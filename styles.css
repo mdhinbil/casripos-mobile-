@@ -156,7 +156,25 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 .posCheckout button{width:100%;padding:13px;font-size:14px;font-weight:800}
 
 .mobOnly{display:none}
+/* Sidebar and cart MUST switch layout at the same width. The sidebar used to dock
+   below 700px while the cart stayed a full-width fixed sheet until 900px, so on
+   tablet portrait (768px) the cart sheet covered the docked navigation. Both now
+   switch at 900px: the sidebar becomes a drawer and the cart a bottom sheet
+   together. (Docking the cart as a side column here instead would leave only
+   ~138px for products at 768px — not even one card fits.) */
 @media(max-width:900px){
+  /* sidebar → off-canvas drawer */
+  .SB{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%);width:260px}
+  .SB.open{transform:translateX(0)}
+  .sbClose{display:block}
+  .sbOverlay{display:none}
+  .sbOverlay.open{display:block}
+  .tbMenu{display:block}
+  /* Push the top bar (hamburger + title) DOWN below the phone/tablet status bar.
+     The WebView draws under it, so without this the hamburger is jammed against
+     the clock. Fallback 26px where no inset is reported. */
+  .TB{height:auto;min-height:54px;padding-top:calc(max(env(safe-area-inset-top),26px));align-items:flex-start;padding-bottom:8px}
+  .TB .tbMenu,.TB .tbTitle,.TB .tbBtn{margin-top:2px}
   .posWrap{grid-template-columns:1fr;height:auto}
   /* The cart is a bottom sheet. On a phone bottom:0 sits UNDER the system nav
      bar, so the collapsed "Cart" handle was half-hidden. Peek = 56px header +
@@ -170,19 +188,10 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
   .mobOnly{display:inline-block}
 }
 
-/* ═══ MOBILE RESPONSIVE ════════════════════════════════════════ */
+/* ═══ PHONE-ONLY TWEAKS ════════════════════════════════════════ */
+/* Sidebar-drawer + top-bar rules now live in the 900px block above, so tablets
+   get them too. What stays here is genuinely phone-sized: tighter grids/type. */
 @media(max-width:700px){
-  .SB{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%);width:260px}
-  .SB.open{transform:translateX(0)}
-  .sbClose{display:block}
-  .sbOverlay{display:none}
-  .sbOverlay.open{display:block}
-  .tbMenu{display:block}
-  /* Push the top bar (hamburger + title) DOWN below the phone's status bar.
-     The WebView draws under the status bar, so without this the hamburger was
-     jammed against the clock/icons. Fallback 26px for phones that report no inset. */
-  .TB{height:auto;min-height:54px;padding-top:calc(max(env(safe-area-inset-top),26px));align-items:flex-start;padding-bottom:8px}
-  .TB .tbMenu,.TB .tbTitle,.TB .tbBtn{margin-top:2px}
   .kG{grid-template-columns:repeat(2,1fr)}
   .PA{padding:12px}
   .phT{font-size:17px}
