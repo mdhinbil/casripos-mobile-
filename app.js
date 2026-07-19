@@ -75,7 +75,14 @@ var BIZ_TYPES=[
   {k:"bar",        en:"Juice / Tea bar",       so:"Baar Casiir",  ic:"🍵"}
 ];
 function _bizUsesTables(){return ["restaurant","cafe","bar"].indexOf(BIZ.type)>=0;}
-function _bizUsesBarcode(){return BIZ.type==="retail";}
+// Show the POS scan bar for shops/retail, and for ANY business that has started
+// putting barcodes on its products. (It used to be retail-only, so a shop or
+// grocery could never scan.) The SKU/barcode fields themselves are now always
+// available on the product form regardless of business type.
+function _bizUsesBarcode(){
+  if(BIZ.type==="retail"||BIZ.type==="shop")return true;
+  return forBiz(PRODUCTS).some(function(p){return !!(p.barcode||p.sku);});
+}
 // Active POS terminal state
 var TABLE_NO="", ORDER_TYPE="Dine-in";
 
@@ -388,10 +395,11 @@ PAGES.pos=function(){
 function _scanBarcode(input){
   var code=(input.value||"").trim();if(!code)return;
   var p=forBiz(PRODUCTS).find(function(x){return ((x.sku||"")+"").toLowerCase()===code.toLowerCase()||((x.barcode||"")+"").toLowerCase()===code.toLowerCase();});
-  if(!p){toast(T("Not found: ","Lama helin: ")+code);input.select();return;}
-  if(p.stock<=0){toast(T("Out of stock","Kaydka ma jiro"));return;}
+  if(!p){toast(T("No product with code ","Alaab lambarkan ma leh ")+code);input.select();return;}
+  if(p.stock<=0){toast(T("Out of stock: ","Kaydka ma jiro: ")+p.name);input.value="";input.focus();return;}
   addToCart(p.id);
-  input.value="";input.focus();
+  toast(p.name+" +1");            // confirm the scan actually landed
+  input.value="";input.focus();   // ready for the next scan
 }
 function _uniqueCats(){var s={};forBiz(PRODUCTS).forEach(function(p){if(p.cat)s[p.cat]=1;});return Object.keys(s).sort();}
 function _filterProducts(){
@@ -401,7 +409,12 @@ function _renderProductCards(){
   var q=($("posQ")&&$("posQ").value||"").toLowerCase();
   var list=forBiz(PRODUCTS).filter(function(p){
     if(CAT_FILTER!=="all"&&p.cat!==CAT_FILTER)return false;
-    if(q&&p.name.toLowerCase().indexOf(q)<0&&(p.cat||"").toLowerCase().indexOf(q)<0)return false;
+    // Search matches name, category, barcode and SKU — so typing or scanning a
+    // code into the normal search box finds the product too.
+    if(q&&p.name.toLowerCase().indexOf(q)<0
+        &&(p.cat||"").toLowerCase().indexOf(q)<0
+        &&(p.barcode||"").toLowerCase().indexOf(q)<0
+        &&(p.sku||"").toLowerCase().indexOf(q)<0)return false;
     return true;
   });
   if(!list.length)return "<div class=\"empty\" style=\"grid-column:1/-1\"><div class=\"emIc\">&#128269;</div>"+T("No products match","Wax aan u dhigma ma jiraan")+"</div>";
@@ -689,12 +702,15 @@ PAGES.products=function(){
   var bizProducts=forBiz(PRODUCTS);
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Products","Alaabta")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+bizProducts.length+" "+T("items","alaab")+"</div></div>";
   h+="<div class=\"phA\"><button class=\"btn btnP\" onclick=\"openAddProduct()\">+ "+T("Add product","Ku dar alaab")+"</button></div></div>";
-  h+="<div class=\"box\"><table><thead><tr><th>"+T("Product","Alaabta")+"</th><th>"+T("Category","Qaybta")+"</th><th>"+T("Price","Qiimaha")+"</th><th>"+T("Stock","Kayd")+"</th><th></th></tr></thead><tbody>";
-  if(!bizProducts.length){h+="<tr><td colspan=\"5\"><div class=\"empty\"><div class=\"emIc\">&#128230;</div>"+T("No products yet","Alaab ma jirto weli")+"</div></td></tr>";}
+  h+="<div class=\"box\"><table><thead><tr><th>"+T("Product","Alaabta")+"</th><th>"+T("Barcode / SKU","Barcode / SKU")+"</th><th>"+T("Category","Qaybta")+"</th><th>"+T("Price","Qiimaha")+"</th><th>"+T("Stock","Kayd")+"</th><th></th></tr></thead><tbody>";
+  if(!bizProducts.length){h+="<tr><td colspan=\"6\"><div class=\"empty\"><div class=\"emIc\">&#128230;</div>"+T("No products yet","Alaab ma jirto weli")+"</div></td></tr>";}
   else{
     bizProducts.forEach(function(p){
       var stkBdg=p.stock<=0?"br":p.stock<=5?"ba":"bg";
       h+="<tr><td><strong>"+(p.icon||"&#128230;")+" "+esc(p.name)+"</strong></td>";
+      h+="<td>"+(p.barcode?"<div style=\"font-family:ui-monospace,monospace;font-size:11.5px;color:#0a1628\">"+esc(p.barcode)+"</div>":"")+
+         (p.sku?"<div style=\"font-size:10px;color:#5c6b82\">"+esc(p.sku)+"</div>":"")+
+         (!p.barcode&&!p.sku?"<span style=\"color:#98a2b3\">—</span>":"")+"</td>";
       h+="<td><span class=\"bdg bgr\">"+esc(p.cat||"-")+"</span></td>";
       h+="<td><strong>"+money(p.price)+"</strong></td>";
       h+="<td><span class=\"bdg "+stkBdg+"\">"+p.stock+"</span></td>";
@@ -710,8 +726,9 @@ PAGES.products=function(){
 function openAddProduct(){
   EDIT_PROD=null;
   ["mp_nm","mp_cat","mp_pr","mp_stk","mp_ic","mp_sku","mp_bc"].forEach(function(id){var e=$(id);if(e)e.value="";});
-  // SKU + barcode fields are only relevant for retail; hide otherwise
-  var rr=$("mp_retail_row");if(rr)rr.style.display=_bizUsesBarcode()?"grid":"none";
+  // SKU + barcode are available to EVERY business type now — a shop or cafe
+  // sells barcoded bottled goods just like a retail store does.
+  var rr=$("mp_retail_row");if(rr)rr.style.display="grid";
   $("M_prod_t").textContent=T("Add product","Ku dar alaab");
   openM("M_prod");
 }
@@ -725,7 +742,7 @@ function openEditProduct(pid){
   $("mp_ic").value=p.icon||"";
   if($("mp_sku"))$("mp_sku").value=p.sku||"";
   if($("mp_bc"))$("mp_bc").value=p.barcode||"";
-  var rr=$("mp_retail_row");if(rr)rr.style.display=(_bizUsesBarcode()||p.sku||p.barcode)?"grid":"none";
+  var rr=$("mp_retail_row");if(rr)rr.style.display="grid";   // always available
   $("M_prod_t").textContent=T("Edit product","Wax ka beddel alaab");
   openM("M_prod");
 }
@@ -735,6 +752,16 @@ function saveProduct(){
   var stk=parseInt($("mp_stk").value);if(isNaN(stk)||stk<0)stk=0;
   var sku=$("mp_sku")?$("mp_sku").value.trim():"";
   var bc=$("mp_bc")?$("mp_bc").value.trim():"";
+  // A barcode must be unique within the business, or scanning it is ambiguous
+  // and would ring up whichever product happened to be found first.
+  if(bc||sku){
+    var clash=forBiz(PRODUCTS).find(function(x){
+      if(x.id===EDIT_PROD)return false;
+      return (bc&&(x.barcode||"").toLowerCase()===bc.toLowerCase())||
+             (sku&&(x.sku||"").toLowerCase()===sku.toLowerCase());
+    });
+    if(clash){toast(T("Already used by ","Waxaa isticmaala ")+clash.name);return;}
+  }
   if(EDIT_PROD){
     var p=PRODUCTS.find(function(x){return x.id===EDIT_PROD;});
     if(p){p.name=nm;p.cat=$("mp_cat").value.trim();p.price=pr;p.stock=stk;p.icon=$("mp_ic").value.trim();p.sku=sku;p.barcode=bc;}
