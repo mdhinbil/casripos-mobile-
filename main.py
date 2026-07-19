@@ -77,11 +77,39 @@ try:
             CasriWebViewClient = autoclass('org.casri.pos.CasriWebViewClient')
         except Exception:
             CasriWebViewClient = WebViewClient
+        # Chrome client: grants camera/mic to the page and makes native JS
+        # dialogs work. Without one the WebView silently drops both.
+        try:
+            CasriWebChromeClient = autoclass('org.casri.pos.CasriWebChromeClient')
+        except Exception:
+            CasriWebChromeClient = None
         WebSettings = autoclass('android.webkit.WebSettings')
         ViewGroupLayoutParams = autoclass('android.view.ViewGroup$LayoutParams')
         WEBVIEW_AVAILABLE = True
 except Exception:
     pass
+
+
+def _request_camera_permission():
+    """Ask for the runtime CAMERA permission (Android 6+).
+
+    Granting a WebView PermissionRequest is not enough on its own — the app
+    process must hold the OS permission too. Asked once, up front; declining it
+    only disables camera scanning, never the till itself.
+    """
+    if platform != 'android':
+        return
+    try:
+        from android.permissions import request_permissions, Permission, check_permission
+        try:
+            if check_permission(Permission.CAMERA):
+                return
+        except Exception:
+            pass
+        request_permissions([Permission.CAMERA])
+    except Exception as exc:
+        # Never let a permission problem stop the app from opening.
+        print('[Casri] camera permission request skipped:', exc)
 
 
 def _mount_webview():
@@ -122,6 +150,13 @@ def _mount_webview():
                 s.setMediaPlaybackRequiresUserGesture(False)
                 s.setCacheMode(WebSettings.LOAD_DEFAULT)
                 webview.setWebViewClient(CasriWebViewClient())
+                # Chrome client — camera/mic permission prompts and native JS
+                # dialogs both arrive here. Missing one is why they did nothing.
+                if CasriWebChromeClient is not None:
+                    try:
+                        webview.setWebChromeClient(CasriWebChromeClient(activity))
+                    except Exception as exc:
+                        print('[Casri] WebChromeClient not attached:', exc)
 
                 # Enable Chrome DevTools remote inspection — connect Chrome on
                 # PC to chrome://inspect to debug the WebView.
@@ -188,6 +223,10 @@ class CasriApp(App):
         Window.clearcolor = (0.04, 0.09, 0.16, 1)   # navy #0a1628
         self.splash = SplashScreen()
         if WEBVIEW_AVAILABLE:
+            # Ask for CAMERA before the WebView loads, so the OS permission is
+            # already settled if the page later requests the camera. Declining
+            # only disables camera scanning — the till works either way.
+            Clock.schedule_once(lambda *_: _request_camera_permission(), 0.1)
             # Slight delay so the Kivy window settles before we add the WebView
             Clock.schedule_once(lambda *_: _mount_webview(), 0.3)
         else:

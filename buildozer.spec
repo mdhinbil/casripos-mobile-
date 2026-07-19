@@ -40,6 +40,14 @@ android.presplash_color = #0a1628
 
 # INTERNET is kept only so external hand-offs (wa.me receipts, tel:) work; the
 # app itself needs no network. ACCESS_NETWORK_STATE lets the WebView behave.
+#
+# CAMERA is deliberately NOT declared yet. Google Play treats a declared CAMERA
+# permission as implying <uses-feature android:hardware.camera required="true">
+# unless the manifest says otherwise — and this buildozer.spec has no way to add
+# a uses-feature entry. Declaring it now would hide the app from camera-less
+# devices (some counter tablets) for a feature that isn't built yet. It gets
+# added in the same release as the scanner, together with a required="false"
+# uses-feature. main.py already has the runtime request wired and dormant.
 android.permissions = INTERNET, ACCESS_NETWORK_STATE
 
 android.api        = 35
