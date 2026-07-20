@@ -50,7 +50,7 @@ function switchBiz(bid){
   // Only the super-admin may change the active business. Without this guard a
   // business-scoped user could switch to another business and read its products,
   // sales and takings.
-  if(!isSuperAdmin()){toast(T("Not allowed","Lama ogoolayn"));return;}
+  if(!isSuperAdmin()){toast(T("Not allowed","Lama ogoolaan"));return;}
   if(!BIZ_LIST.find(function(b){return b.id===bid;}))return;
   CURRENT_BIZ_ID=bid;
   _save("pos_current_biz",CURRENT_BIZ_ID);
@@ -330,7 +330,7 @@ PAGES.dashboard=function(){
   h+="</div>";
 
   h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#11088; "+T("Top sellers today","Alaabta iibka badan maanta")+"</div></div><div class=\"bB\">";
-  if(!topProds.length){h+="<div class=\"empty\"><div class=\"emIc\">&#128181;</div>"+T("No sales yet today","Iib lama qaadin maanta")+"</div>";}
+  if(!topProds.length){h+="<div class=\"empty\"><div class=\"emIc\">&#128181;</div>"+T("No sales yet today","Waxba lama iibin maanta")+"</div>";}
   else{
     topProds.forEach(function(p,i){
       h+="<div style=\"display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f2f5\">";
@@ -371,7 +371,7 @@ PAGES.pos=function(){
   h+="<div class=\"posRight\" id=\"posCart\">";
   h+="<div class=\"posCartH\" onclick=\"_toggleCart()\">";
   h+="<div class=\"ttl\">&#128722; "+T("Cart","Bacda")+" <span id=\"cartCt\">("+CART.length+")</span></div>";
-  h+="<button class=\"clr\" onclick=\"event.stopPropagation();_clearCart()\">&#10005; "+T("Clear","Nadiifi")+"</button>";
+  h+="<button class=\"clr\" onclick=\"event.stopPropagation();_clearCart()\">&#10005; "+T("Clear","Cadee")+"</button>";
   h+="</div>";
   // Restaurant/Cafe/Bar: table + order type pickers right above the cart list
   if(_bizUsesTables()){
@@ -417,7 +417,7 @@ function _renderProductCards(){
         &&(p.sku||"").toLowerCase().indexOf(q)<0)return false;
     return true;
   });
-  if(!list.length)return "<div class=\"empty\" style=\"grid-column:1/-1\"><div class=\"emIc\">&#128269;</div>"+T("No products match","Wax aan u dhigma ma jiraan")+"</div>";
+  if(!list.length)return "<div class=\"empty\" style=\"grid-column:1/-1\"><div class=\"emIc\">&#128269;</div>"+T("No products match","Wax u dhigma ma jiraan")+"</div>";
   return list.map(function(p){
     var out=p.stock<=0?" out":"";
     var stkCls=p.stock<=5?" low":"";
@@ -435,7 +435,7 @@ function addToCart(pid){
   var line=CART.find(function(c){return c.id===pid;});
   if(line){
     if(line.qty<p.stock)line.qty++;
-    else{toast(T("Not enough stock","Kayd ma fillin"));return;}
+    else{toast(T("Not enough stock","Kaydku kuma filna"));return;}
   } else {
     CART.push({id:p.id,name:p.name,price:p.price,qty:1,maxStock:p.stock});
   }
@@ -450,7 +450,7 @@ function changeQty(pid,delta){
   _refreshCart();
 }
 function removeFromCart(pid){CART=CART.filter(function(c){return c.id!==pid;});_refreshCart();}
-async function _clearCart(){if(CART.length&&!await igAsk(T("Clear the cart?","Bacda nadiifi?")))return;CART=[];_refreshCart();}
+async function _clearCart(){if(CART.length&&!await igAsk(T("Clear the cart?","Selleda cadee?")))return;CART=[];_refreshCart();}
 function _toggleCart(){var c=$("posCart");if(c)c.classList.toggle("open");}
 function _refreshCart(){
   var cl=$("cartList");if(cl)cl.innerHTML=_renderCart();
@@ -459,7 +459,7 @@ function _refreshCart(){
   if(sum)sum.outerHTML=_renderCartSummary();
 }
 function _renderCart(){
-  if(!CART.length)return "<div class=\"empty\"><div class=\"emIc\">&#128722;</div>"+T("Cart is empty","Bacda waa madhan")+"</div>";
+  if(!CART.length)return "<div class=\"empty\"><div class=\"emIc\">&#128722;</div>"+T("Cart is empty","Selledu waa madhantahay")+"</div>";
   return CART.map(function(c){
     return "<div class=\"cartRow\">"+
       "<div style=\"flex:1;min-width:0\"><div class=\"cNm\">"+esc(c.name)+"</div><div class=\"cPr\">"+money(c.price)+" × "+c.qty+"</div></div>"+
@@ -479,7 +479,7 @@ function _cartTotals(){
 function _renderCartSummary(){
   var t=_cartTotals();
   var h="<div class=\"posSum\">";
-  h+="<div class=\"sumRow\"><span>"+T("Items","Tirada")+"</span><span>"+t.items+"</span></div>";
+  h+="<div class=\"sumRow\"><span>"+T("Items","Alaabta")+"</span><span>"+t.items+"</span></div>";
   h+="<div class=\"sumRow\"><span>"+T("Subtotal","Wadarta")+"</span><span>"+money(t.sub)+"</span></div>";
   if(BIZ.tax>0)h+="<div class=\"sumRow\"><span>"+T("Tax","Canshuur")+" ("+BIZ.tax+"%)</span><span>"+money(t.tax)+"</span></div>";
   h+="<div class=\"sumRow tot\"><span>"+T("Total","Wadarta guud")+"</span><span>"+money(t.tot)+"</span></div>";
@@ -491,9 +491,9 @@ function _renderCartSummary(){
 // cash (with change owed), card, or mobile money (ZAAD / EVC Plus / eDahab).
 var PAY_METHOD="cash";
 function payLabel(m){
-  return m==="card"?T("Card","Kaadh")
+  return m==="card"?T("Card","Risiidh")
        : m==="mobile"?T("Mobile money","Lacag mobile")
-       : T("Cash","Cash");
+       : T("Cash","Cadaan");
 }
 function setPayMethod(m){
   PAY_METHOD=m;
@@ -532,7 +532,7 @@ function openPayModal(){
   var amt=$("pay_amt");if(amt)amt.textContent=money(t.tot);
   var ttl=$("pay_t");if(ttl)ttl.textContent=T("Payment","Lacag bixinta");
   // bilingual labels
-  var m={payM_cash:[T("Cash","Cash"),0],payM_card:[T("Card","Kaadh"),0],payM_mobile:[T("Mobile","Mobile"),0]};
+  var m={payM_cash:[T("Cash","Cadaan"),0],payM_card:[T("Card","Risiidh"),0],payM_mobile:[T("Mobile","Mobile"),0]};
   Object.keys(m).forEach(function(k){var e=$(k);if(e)e.textContent=m[k][0];});
   var rl=$("pay_recv_l");if(rl)rl.textContent=T("Amount received","Lacagta la helay");
   var cl=$("pay_change_l");if(cl)cl.textContent=T("Change","Baaqiga");
@@ -650,7 +650,7 @@ function _receiptText(sale){
   if(BIZ.addr)wrap(BIZ.addr,w).forEach(function(l){h+=center(l)+"\n";});
   if(BIZ.phone)h+=center(BIZ.phone)+"\n";
   h+="\n"+"=".repeat(w)+"\n";
-  h+=line(T("Receipt","Kaadhka"),"#"+String(sale.id).slice(-6))+"\n";
+  h+=line(T("Receipt","Risiidh"),"#"+String(sale.id).slice(-6))+"\n";
   h+=line(T("Date","Taariikh"),when)+"\n";
   h+=line(T("Cashier","Iibiyaha"),sale.cashier||"-")+"\n";
   if(sale.tableNo)h+=line(T("Table","Miiska"),"#"+sale.tableNo)+"\n";
@@ -700,7 +700,7 @@ function printReceipt(){
 var EDIT_PROD=null;
 PAGES.products=function(){
   var bizProducts=forBiz(PRODUCTS);
-  var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Products","Alaabta")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+bizProducts.length+" "+T("items","alaab")+"</div></div>";
+  var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Products","Alaabta")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+bizProducts.length+" "+T("items","alaabta")+"</div></div>";
   h+="<div class=\"phA\"><button class=\"btn btnP\" onclick=\"openAddProduct()\">+ "+T("Add product","Ku dar alaab")+"</button></div></div>";
   h+="<div class=\"box\"><table><thead><tr><th>"+T("Product","Alaabta")+"</th><th>"+T("Barcode / SKU","Barcode / SKU")+"</th><th>"+T("Category","Qaybta")+"</th><th>"+T("Price","Qiimaha")+"</th><th>"+T("Stock","Kayd")+"</th><th></th></tr></thead><tbody>";
   if(!bizProducts.length){h+="<tr><td colspan=\"6\"><div class=\"empty\"><div class=\"emIc\">&#128230;</div>"+T("No products yet","Alaab ma jirto weli")+"</div></td></tr>";}
@@ -789,9 +789,9 @@ PAGES.sales=function(){
   var bizSales=forBiz(SALES);
   var showTable=_bizUsesTables();
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Sales History","Taariikhda Iibka")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+bizSales.length+" "+T("transactions","macaamil")+"</div></div></div>";
-  var head="<th>"+T("Receipt","Kaadh")+"</th><th>"+T("Date","Taariikh")+"</th>";
+  var head="<th>"+T("Receipt","Risiidh")+"</th><th>"+T("Date","Taariikh")+"</th>";
   if(showTable)head+="<th>"+T("Table / Order","Miis / Dalbka")+"</th>";
-  head+="<th>"+T("Items","Alaab")+"</th><th>"+T("Paid by","Lacag bixin")+"</th><th>"+T("Cashier","Iibiyaha")+"</th><th>"+T("Total","Wadarta")+"</th><th></th>";
+  head+="<th>"+T("Items","Alaabta")+"</th><th>"+T("Paid by","Lacag bixin")+"</th><th>"+T("Cashier","Iibiyaha")+"</th><th>"+T("Total","Wadarta")+"</th><th></th>";
   h+="<div class=\"box\"><table><thead><tr>"+head+"</tr></thead><tbody>";
   var colspan=showTable?8:7;
   if(!bizSales.length){h+="<tr><td colspan=\""+colspan+"\"><div class=\"empty\"><div class=\"emIc\">&#128181;</div>"+T("No sales yet","Iib lama jirin weli")+"</div></td></tr>";}
@@ -842,7 +842,7 @@ PAGES.reports=function(){
 
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Reports","Warbixinno")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+T("Sales overview","Guudmar iibka")+"</div></div></div>";
   h+="<div class=\"kG\">";
-  h+=kpi(T("Lifetime sales","Iibka guud"),money(totalRev),"#1a6ef5",bizSales.length+" "+T("sales","iib"));
+  h+=kpi(T("Lifetime sales","Iibka guud"),money(totalRev),"#1a6ef5",bizSales.length+" "+T("sales","la iibiyey"));
   h+=kpi(T("Avg sale","Celcelis"),money(bizSales.length?totalRev/bizSales.length:0),"#36b37e",null);
   h+=kpi(T("Products sold","Alaab la iibiyay"),topProds.reduce(function(a,p){return a+p.q;},0),"#6554c0",null);
   h+=kpi(T("SKUs","SKU"),bizProducts.length,"#ff991f",null);
@@ -863,7 +863,7 @@ PAGES.reports=function(){
       var pct=totalRev>0?(byPay[p[0]].v/totalRev*100):0;
       if(pct>0)h+="<div style=\"width:"+pct+"%;background:"+p[1]+"\"></div>";
     });
-    h+="</div><table><thead><tr><th>"+T("Method","Habka")+"</th><th>"+T("Sales","Iibab")+"</th><th style=\"text-align:right\">"+T("Amount","Lacagta")+"</th><th style=\"text-align:right\">%</th></tr></thead><tbody>";
+    h+="</div><table><thead><tr><th>"+T("Method","Habka")+"</th><th>"+T("Sales","Iibka")+"</th><th style=\"text-align:right\">"+T("Amount","Lacagta")+"</th><th style=\"text-align:right\">%</th></tr></thead><tbody>";
     [["cash","#36b37e"],["card","#1a6ef5"],["mobile","#00b8d9"]].forEach(function(p){
       var d=byPay[p[0]],pct=totalRev>0?Math.round(d.v/totalRev*100):0;
       h+="<tr><td><span style=\"display:inline-block;width:9px;height:9px;border-radius:2px;background:"+p[1]+";margin-right:7px\"></span><strong>"+payLabel(p[0])+"</strong></td>";
@@ -896,7 +896,7 @@ PAGES.reports=function(){
       h+="<div style=\"display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f2f5\">";
       h+="<div style=\"width:22px;color:#999;font-size:11px;font-weight:700\">#"+(i+1)+"</div>";
       h+="<div style=\"flex:1\">"+esc(p.n)+"</div>";
-      h+="<div class=\"bdg bgr\" style=\"margin-right:6px\">"+p.q+" "+T("sold","iib")+"</div>";
+      h+="<div class=\"bdg bgr\" style=\"margin-right:6px\">"+p.q+" "+T("sold","la iibiyey")+"</div>";
       h+="<div style=\"font-weight:700;color:#1a6ef5;min-width:80px;text-align:right\">"+money(p.r)+"</div></div>";
     });
   }
@@ -912,7 +912,7 @@ PAGES.businesses=function(){
   if(!isSuperAdmin())return "<div class=\"empty\">"+T("Super-admin only","Maamulaha guud kaliya")+"</div>";
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Businesses","Ganacsiyada")+"</div><div class=\"phS\">"+BIZ_LIST.length+" "+T("registered","la diiwaangeliyay")+"</div></div>";
   h+="<div class=\"phA\"><button class=\"btn btnP\" onclick=\"openAddBiz()\">+ "+T("Add business","Ku dar ganacsi")+"</button></div></div>";
-  h+="<div class=\"box\"><table><thead><tr><th>"+T("Name","Magaca")+"</th><th>"+T("Type","Nooca")+"</th><th>"+T("Currency","Lacagta")+"</th><th>"+T("Admins","Maamulayaal")+"</th><th>"+T("Products","Alaab")+"</th><th>"+T("Sales","Iib")+"</th><th></th></tr></thead><tbody>";
+  h+="<div class=\"box\"><table><thead><tr><th>"+T("Name","Magaca")+"</th><th>"+T("Type","Nooca")+"</th><th>"+T("Currency","Lacagta")+"</th><th>"+T("Admins","Maamulayaal")+"</th><th>"+T("Products","Alaabta")+"</th><th>"+T("Sales","Iibka")+"</th><th></th></tr></thead><tbody>";
   BIZ_LIST.forEach(function(b){
     var btype=BIZ_TYPES.find(function(x){return x.k===b.type;});
     var bIc=btype?btype.ic:"🏢";
@@ -944,7 +944,7 @@ PAGES.businesses=function(){
   // Workflow banner — explains how per-business admins log in
   h+="<div style=\"background:#fff7d6;border-radius:8px;padding:13px;border:1px solid #ffe7a3;font-size:11px;color:#974f0c\">";
   h+="<strong>&#128272; "+T("How other businesses sign in","Sida ganacsiyada kale ay u galaan")+"</strong><br>";
-  h+=T("Every business uses the SAME login page (this URL). Click ","Ganacsi kastaa wuxuu isticmaalaa SHIDA bog gelitaanka. Riix ")+
+  h+=T("Every business uses the SAME login page (this URL). Click ","Ganacsi kastaa wuxuu isticmaalaa sida bog gelitaanka. Riix ")+
      "&#128100;+ "+T("on a business row to create its admin. Share the username + password you choose with them.","ka dib safka ganacsiga si aad ugu samayso maamule. La wadaag macluumaadka aad samaysid.")+"<br><br>"+
      T("When they sign in, the system reads their account and takes them straight to their business — no \"switch business\" step needed. They only see their business's data, not yours or anyone else's.",
        "Markay galaan, nidaamku wuxuu akhriyaa akoonkooda oo si toos ah ayuu u geeyaa ganacsigooda — lama u baahna wareejin. Waxay arkaan oo kaliya xogta ganacsigooda.");
@@ -1003,9 +1003,9 @@ async function openAddBizAdmin(bid){
   var b=BIZ_LIST.find(function(x){return x.id===bid;});if(!b)return;
   var name=await igAskText(T("Full name for "+b.name+" admin","Magaca buuxa ee maamulaha "+b.name));
   if(!name)return;
-  var user=await igAskText(T("Username (used to sign in)","Magaca isticmaale"));
+  var user=await igAskText(T("Username (used to sign in)","Magaca isticmaalaha"));
   if(!user)return;
-  if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username already taken","Magaca la qaatay"));return;}
+  if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username already taken","Magaca waa la qaatay"));return;}
   var pass=await igAskText(T("Password","Sirta"));
   if(!pass)return;
   ACCOUNTS.push({id:"a"+Date.now(),name:name,username:user,password:pass,role:"admin",bizId:bid,active:true});
@@ -1016,7 +1016,7 @@ async function openAddBizAdmin(bid){
   igAlert(
     T("Admin created for "+b.name+"!\n\n","Maamule loo abuuray "+b.name+"!\n\n")+
     T("Share these login details with the "+b.name+" admin:\n\n","La wadaag macluumaadkan maamulaha "+b.name+":\n\n")+
-    "  "+T("Username","Magaca isticmaale")+": "+user+"\n"+
+    "  "+T("Username","Magaca isticmaalaha")+": "+user+"\n"+
     "  "+T("Password","Sirta")+":  "+pass+"\n\n"+
     T("They open this same URL, type those credentials on the login screen, and the system automatically takes them to "+b.name+" only — no \"switch business\" step needed.",
       "Waxay furayaan isla URL-kan, qoraan macluumaadka isticmaalka, oo nidaamku si toos ah ayuu u geeyaa "+b.name+" oo kaliya — lama u baahna in la wareejiyo.")
@@ -1078,8 +1078,8 @@ PAGES.users=function(){
 function _togglePw(id,pw){var el=$("pw_"+id);if(!el)return;if(el.getAttribute("data-on")==="1"){el.textContent="••••••";el.setAttribute("data-on","0");}else{el.textContent=pw;el.setAttribute("data-on","1");}}
 async function _newAccount(){
   var name=await igAskText(T("Full name","Magaca buuxa"));if(!name)return;
-  var user=await igAskText(T("Username","Magaca isticmaale"));if(!user)return;
-  if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username taken","Magaca la qaatay"));return;}
+  var user=await igAskText(T("Username","Magaca isticmaalaha"));if(!user)return;
+  if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username taken","Magaca waa la qaatay"));return;}
   var pass=await igAskText(T("Password","Sirta"));if(!pass)return;
   var role=await igAsk(T("Make admin? (OK = admin, Cancel = cashier)","Maamulaha ka dhig?"))?"admin":"cashier";
   // Scope new accounts to a specific business. Default = active business.
@@ -1097,7 +1097,7 @@ async function _newAccount(){
     );
     if(ans===null)return;
     var n=parseInt(ans);
-    if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khalad"));return;}
+    if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khaldan"));return;}
     if(n===0){
       if(!await igAsk(T("This user will have super-admin access to ALL businesses. Are you sure?","Maamule guud oo ka shaqeeya DHAMMAAN ganacsiyada. Ma hubtaa?")))return;
       scope="";
@@ -1123,7 +1123,7 @@ async function reassignAccount(id){
   );
   if(ans===null)return;
   var n=parseInt(ans);
-  if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khalad"));return;}
+  if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khaldan"));return;}
   a.bizId=(n===0)?"":BIZ_LIST[n-1].id;
   _save("pos_acc",ACCOUNTS);renderPage("users");
   var scopeLbl=a.bizId?(BIZ_LIST.find(function(b){return b.id===a.bizId;})||{}).name:T("super-admin","maamule guud");
@@ -1132,7 +1132,7 @@ async function reassignAccount(id){
 async function _delAcc(id){
   var a=ACCOUNTS.find(function(x){return x.id===id;});if(!a)return;
   // Per-business admin can only delete users in their own business
-  if(!isSuperAdmin()&&a.bizId!==CURRENT_USER.bizId){toast(T("Not allowed","Lama ogoolayn"));return;}
+  if(!isSuperAdmin()&&a.bizId!==CURRENT_USER.bizId){toast(T("Not allowed","Lama ogoolaan"));return;}
   if(!await igAsk(T("Delete user?","Tirtir?")))return;
   ACCOUNTS=ACCOUNTS.filter(function(x){return x.id!==id;});
   _save("pos_acc",ACCOUNTS);
