@@ -863,7 +863,7 @@ PAGES.reports=function(){
       var pct=totalRev>0?(byPay[p[0]].v/totalRev*100):0;
       if(pct>0)h+="<div style=\"width:"+pct+"%;background:"+p[1]+"\"></div>";
     });
-    h+="</div><table><thead><tr><th>"+T("Method","Habka")+"</th><th>"+T("Sales","Iibka")+"</th><th style=\"text-align:right\">"+T("Amount","Lacagta")+"</th><th style=\"text-align:right\">%</th></tr></thead><tbody>";
+    h+="</div><table><thead><tr><th>"+T("Method","Habka")+"</th><th>"+T("Sales","Iibabka")+"</th><th style=\"text-align:right\">"+T("Amount","Lacagta")+"</th><th style=\"text-align:right\">%</th></tr></thead><tbody>";
     [["cash","#36b37e"],["card","#1a6ef5"],["mobile","#00b8d9"]].forEach(function(p){
       var d=byPay[p[0]],pct=totalRev>0?Math.round(d.v/totalRev*100):0;
       h+="<tr><td><span style=\"display:inline-block;width:9px;height:9px;border-radius:2px;background:"+p[1]+";margin-right:7px\"></span><strong>"+payLabel(p[0])+"</strong></td>";
@@ -912,7 +912,7 @@ PAGES.businesses=function(){
   if(!isSuperAdmin())return "<div class=\"empty\">"+T("Super-admin only","Maamulaha guud kaliya")+"</div>";
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Businesses","Ganacsiyada")+"</div><div class=\"phS\">"+BIZ_LIST.length+" "+T("registered","la diiwaangeliyay")+"</div></div>";
   h+="<div class=\"phA\"><button class=\"btn btnP\" onclick=\"openAddBiz()\">+ "+T("Add business","Ku dar ganacsi")+"</button></div></div>";
-  h+="<div class=\"box\"><table><thead><tr><th>"+T("Name","Magaca")+"</th><th>"+T("Type","Nooca")+"</th><th>"+T("Currency","Lacagta")+"</th><th>"+T("Admins","Maamulayaal")+"</th><th>"+T("Products","Alaabta")+"</th><th>"+T("Sales","Iibka")+"</th><th></th></tr></thead><tbody>";
+  h+="<div class=\"box\"><table><thead><tr><th>"+T("Name","Magaca")+"</th><th>"+T("Type","Nooca")+"</th><th>"+T("Currency","Lacagta")+"</th><th>"+T("Admins","Maamulayaal")+"</th><th>"+T("Products","Alaabta")+"</th><th>"+T("Sales","Iibabka")+"</th><th></th></tr></thead><tbody>";
   BIZ_LIST.forEach(function(b){
     var btype=BIZ_TYPES.find(function(x){return x.k===b.type;});
     var bIc=btype?btype.ic:"🏢";
