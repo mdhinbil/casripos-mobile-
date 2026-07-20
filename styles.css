@@ -240,3 +240,6 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 .payChange span{font-size:12px;font-weight:700;color:#44536b;text-transform:uppercase;letter-spacing:.04em}
 .payChange strong{font-size:20px;font-weight:800;color:#1a7a4f}
 .payChange.short strong{color:#c62f16}
+
+/* Prompt/choice body text keeps its line breaks (business lists, multi-line asks) */
+#pr_text,#ch_text{white-space:pre-wrap}

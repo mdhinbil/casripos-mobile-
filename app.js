@@ -153,8 +153,12 @@ function igAsk(text,yesLabel){return new Promise(function(res){igConfirm(text,fu
 var _IG_POK=null,_IG_PNO=null;
 function igPrompt(text,defVal,onOk,onCancel){
   _IG_POK=onOk||null;_IG_PNO=onCancel||null;
-  var t=$("pr_title");if(t)t.textContent=text||T("Enter value","Geli qiimaha");
-  var x=$("pr_text");if(x)x.textContent="";
+  // Multi-line messages: first line is the heading, the rest goes in the body
+  // (which preserves newlines). Putting it all in the heading collapsed the
+  // line breaks and produced one unreadable run-on line.
+  var all=String(text||T("Enter value","Geli qiimaha")).split("\n");
+  var t=$("pr_title");if(t)t.textContent=all[0];
+  var x=$("pr_text");if(x)x.textContent=all.slice(1).join("\n").trim();
   var i=$("pr_input");if(i)i.value=defVal==null?"":String(defVal);
   var no=$("pr_no");if(no)no.textContent=T("Cancel","Jooji");
   var ok=$("pr_ok");if(ok)ok.textContent=T("OK","Haa");
@@ -165,6 +169,32 @@ function igPrompt(text,defVal,onOk,onCancel){
 function igPromptOk(){var i=$("pr_input");var v=i?i.value:"";var cb=_IG_POK;_IG_POK=_IG_PNO=null;closeM("M_prompt");if(typeof cb==="function")cb(v);}
 function igPromptCancel(){var cb=_IG_PNO;_IG_POK=_IG_PNO=null;closeM("M_prompt");if(typeof cb==="function")cb(null);}
 function igAskText(text,defVal){return new Promise(function(res){igPrompt(text,defVal,function(v){res(v);},function(){res(null);});});}
+
+// Pick one option from a list. opts = [{v:value, t:label}, …]
+// Returns the chosen value, or null if cancelled.
+var _IG_COK=null,_IG_CNO=null;
+function igChoice(title,text,opts,defVal,onOk,onCancel){
+  _IG_COK=onOk||null;_IG_CNO=onCancel||null;
+  var t=$("ch_title");if(t)t.textContent=title||T("Choose","Dooro");
+  var x=$("ch_text");if(x)x.textContent=text||"";
+  var sel=$("ch_sel");
+  if(sel){
+    sel.innerHTML=(opts||[]).map(function(o){
+      return "<option value=\""+esc(String(o.v))+"\""+(String(o.v)===String(defVal)?" selected":"")+">"+esc(o.t)+"</option>";
+    }).join("");
+  }
+  var no=$("ch_no");if(no)no.textContent=T("Cancel","Jooji");
+  var ok=$("ch_ok");if(ok)ok.textContent=T("OK","Haa");
+  if(!$("M_choice")){if(onCancel)onCancel();return;}
+  openM("M_choice");
+}
+function igChoiceOk(){var s=$("ch_sel");var v=s?s.value:null;var cb=_IG_COK;_IG_COK=_IG_CNO=null;closeM("M_choice");if(typeof cb==="function")cb(v);}
+function igChoiceCancel(){var cb=_IG_CNO;_IG_COK=_IG_CNO=null;closeM("M_choice");if(typeof cb==="function")cb(null);}
+function igAskChoice(title,text,opts,defVal){
+  return new Promise(function(res){
+    igChoice(title,text,opts,defVal,function(v){res(v);},function(){res(null);});
+  });
+}
 
 var _IG_AOK=null;
 function igAlert(text,onOk,title){
@@ -1086,23 +1116,22 @@ async function _newAccount(){
   // Per-business admins always get their own business. Super-admin picks.
   var scope=CURRENT_USER.bizId||CURRENT_BIZ_ID;
   if(isSuperAdmin()){
-    // Number the businesses so the super-admin types "1", "2", etc. — no
-    // typo risk and no accidental blank-equals-global pitfall.
-    var list=BIZ_LIST.map(function(b,i){return (i+1)+") "+b.name;}).join("\n");
-    var ans=await igAskText(
-      T("Which business does this user belong to?\n\n","Ganacsi kee ayuu ka tirsanaa?\n\n")+
-      list+"\n\n"+
-      T("Type the number (or type 0 for super-admin / all-business access)","Qor lambarka (ama 0 maamulaha guud)"),
-      "1"
-    );
-    if(ans===null)return;
-    var n=parseInt(ans);
-    if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khaldan"));return;}
-    if(n===0){
+    // A real dropdown of businesses. The old version printed a numbered list
+    // into the prompt and asked the user to type the number — but HTML collapsed
+    // the line breaks, so the list was unreadable and everyone ended up in
+    // business #1 (the pre-filled default).
+    var opts=BIZ_LIST.map(function(b){return {v:b.id,t:b.name};});
+    opts.push({v:"__all__",t:"★ "+T("Super-admin (all businesses)","Maamule guud (dhammaan)")});
+    var pick=await igAskChoice(
+      T("Which business?","Ganacsi kee?"),
+      T("This user will only see this business.","Isticmaalahani wuxuu arki doonaa ganacsigan oo kaliya."),
+      opts, CURRENT_BIZ_ID);
+    if(pick===null)return;
+    if(pick==="__all__"){
       if(!await igAsk(T("This user will have super-admin access to ALL businesses. Are you sure?","Maamule guud oo ka shaqeeya DHAMMAAN ganacsiyada. Ma hubtaa?")))return;
       scope="";
     } else {
-      scope=BIZ_LIST[n-1].id;
+      scope=pick;
     }
   }
   ACCOUNTS.push({id:"a"+Date.now(),name:name,username:user,password:pass,role:role,bizId:scope,active:true});
@@ -1115,16 +1144,14 @@ async function _newAccount(){
 async function reassignAccount(id){
   if(!isSuperAdmin()){toast(T("Super-admin only","Maamulaha guud kaliya"));return;}
   var a=ACCOUNTS.find(function(x){return x.id===id;});if(!a)return;
-  var list=BIZ_LIST.map(function(b,i){return (i+1)+") "+b.name;}).join("\n");
-  var ans=await igAskText(
-    T("Move ","U wareeji ")+a.name+T(" to which business?\n\n"," ganacsi kee?\n\n")+
-    list+"\n\n"+T("Type the number (or 0 for super-admin)","Qor lambarka (ama 0 maamulaha guud)"),
-    "1"
-  );
-  if(ans===null)return;
-  var n=parseInt(ans);
-  if(isNaN(n)||n<0||n>BIZ_LIST.length){toast(T("Invalid choice","Doorasho khaldan"));return;}
-  a.bizId=(n===0)?"":BIZ_LIST[n-1].id;
+  var opts=BIZ_LIST.map(function(b){return {v:b.id,t:b.name};});
+  opts.push({v:"__all__",t:"★ "+T("Super-admin (all businesses)","Maamule guud (dhammaan)")});
+  var pick=await igAskChoice(
+    T("Move ","U wareeji ")+a.name,
+    T("Which business should this user belong to?","Ganacsi kee ayuu ka tirsanaan doonaa?"),
+    opts, a.bizId||"__all__");
+  if(pick===null)return;
+  a.bizId=(pick==="__all__")?"":pick;
   _save("pos_acc",ACCOUNTS);renderPage("users");
   var scopeLbl=a.bizId?(BIZ_LIST.find(function(b){return b.id===a.bizId;})||{}).name:T("super-admin","maamule guud");
   toast(T("Moved → ","La wareejiyay → ")+scopeLbl);

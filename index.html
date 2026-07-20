@@ -214,6 +214,20 @@
   </div>
 </div>
 
+<!-- Pick-one-from-a-list. Replaces the old "type the number" prompt, which was
+     unreadable once the list went into a heading (newlines collapse in HTML). -->
+<div class="MOv" id="M_choice">
+  <div class="MB">
+    <div class="MT" id="ch_title">Choose</div>
+    <div class="MS" id="ch_text"></div>
+    <div class="fi"><select id="ch_sel"></select></div>
+    <div class="MF">
+      <button class="btn" onclick="igChoiceCancel()" id="ch_no">Cancel</button>
+      <button class="btn btnP" onclick="igChoiceOk()" id="ch_ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <div class="MOv" id="M_alert">
   <div class="MB">
     <div class="MT" id="al_title">Casri POS</div>
