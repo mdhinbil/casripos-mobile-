@@ -1185,7 +1185,7 @@ PAGES.settings=function(){
   h+="</div></div>";
   return h;
 };
-async function _wipeProducts(){if(!await igAsk(T("Delete EVERY product in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN alaabta "+BIZ.name+"?")))return;PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});_save("pos_prod",PRODUCTS);toast(T("Products cleared","La nadiifyay"));renderPage("settings");}
+async function _wipeProducts(){if(!await igAsk(T("Delete EVERY product in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN alaabta "+BIZ.name+"?")))return;PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});_save("pos_prod",PRODUCTS);toast(T("Products cleared","Alaabtii waa la cadeeyey"));renderPage("settings");}
 async function _loadSamples(kind){
   var menus={
     restaurant:[
@@ -1265,7 +1265,7 @@ function saveSettings(){
   renderUser();
   toast(T("Saved","La keydiyay"));
 }
-async function _wipeSales(){if(!await igAsk(T("Delete ALL sales in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN iibka "+BIZ.name+"?")))return;SALES=SALES.filter(function(s){return s.bizId!==CURRENT_BIZ_ID;});_save("pos_sales",SALES);toast(T("Cleared","La nadiifyay"));renderPage("settings");}
+async function _wipeSales(){if(!await igAsk(T("Delete ALL sales in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN iibka "+BIZ.name+"?")))return;SALES=SALES.filter(function(s){return s.bizId!==CURRENT_BIZ_ID;});_save("pos_sales",SALES);toast(T("Cleared","waa la cadeeyey"));renderPage("settings");}
 
 // ── BOOT ─────────────────────────────────────────────────────
 (function(){
