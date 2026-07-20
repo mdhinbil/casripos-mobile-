@@ -400,7 +400,7 @@ PAGES.pos=function(){
   // RIGHT: cart
   h+="<div class=\"posRight\" id=\"posCart\">";
   h+="<div class=\"posCartH\" onclick=\"_toggleCart()\">";
-  h+="<div class=\"ttl\">&#128722; "+T("Cart","Bacda")+" <span id=\"cartCt\">("+CART.length+")</span></div>";
+  h+="<div class=\"ttl\">&#128722; "+T("Cart","Selleda")+" <span id=\"cartCt\">("+CART.length+")</span></div>";
   h+="<button class=\"clr\" onclick=\"event.stopPropagation();_clearCart()\">&#10005; "+T("Clear","Cadee")+"</button>";
   h+="</div>";
   // Restaurant/Cafe/Bar: table + order type pickers right above the cart list
