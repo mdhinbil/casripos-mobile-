@@ -1,10 +1,12 @@
 // Casri POS service worker — offline-first cache
-const CACHE = 'casripos-v20';
+const CACHE = 'casripos-v21';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './cloud.js',
+  './cloud_config.js',
   './manifest.json',
   './icon.svg'
 ];
@@ -32,7 +34,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const path = new URL(req.url).pathname;
   // Network-first for HTML and our own code so updates land immediately
-  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html') || /\/(app\.js|styles\.css)$/.test(path)) {
+  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html') || /\/(app\.js|cloud\.js|cloud_config\.js|styles\.css)$/.test(path)) {
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();

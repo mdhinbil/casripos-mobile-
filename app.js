@@ -10,7 +10,16 @@ var CAT_FILTER="all", CART=[];
 
 // ── PERSISTENCE HELPERS ──────────────────────────────────────
 function _load(key,fallback){try{var s=localStorage.getItem(key);if(s)return JSON.parse(s);}catch(e){}return fallback;}
-function _save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){toast("Storage full");}}
+function _save(key,val){
+  try{
+    localStorage.setItem(key,JSON.stringify(val));
+    // Stamp when WE last changed this key. cloudPull compares against the
+    // remote stamp so a device never overwrites newer data with older.
+    localStorage.setItem("pos_ts_"+key,String(Date.now()));
+  }catch(e){toast("Storage full");}
+  // Queue a cloud push. No-op until the user signs in to sync.
+  try{if(typeof cloudQueue==="function")cloudQueue(key);}catch(e){}
+}
 
 // ── DATA ─────────────────────────────────────────────────────
 // ── MULTI-BUSINESS DATA ─────────────────────────────────────
@@ -711,6 +720,100 @@ function _receiptText(sale){
 function _showReceipt(sale){
   $("rec_body").textContent=_receiptText(sale);
   openM("M_rec");
+}
+
+// ── Cloud sync UI (logic lives in cloud.js) ─────────────────
+function _cloudSettingsHTML(){
+  if(typeof CLOUD==="undefined")return "<div style=\"font-size:11px;color:#666\">"+T("Cloud sync unavailable","Cloud lama heli karo")+"</div>";
+  var h="";
+  if(!CLOUD.on){
+    h+="<div style=\"font-size:11px;color:#666;margin-bottom:10px\">"+
+       T("Sign in to keep this device in step with your other devices, and to keep a copy of your data off the phone. The till keeps working without it.",
+         "Gal si aad qalabkan ula socodsiiso qalabkaaga kale, oo aad nuqul xogtaada uga hayso taleefanka dibaddiisa. Iibku wuu shaqeeyaa la'aanteed.")+"</div>";
+    h+="<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:9px;max-width:420px\">";
+    h+="<div class=\"fi\"><label>"+T("Email","Email")+"</label><input type=\"email\" id=\"cl_em\" autocomplete=\"username\" placeholder=\"shop@example.com\"></div>";
+    h+="<div class=\"fi\"><label>"+T("Password","Sirta")+"</label><input type=\"password\" id=\"cl_pw\" autocomplete=\"current-password\" placeholder=\"••••••\"></div>";
+    h+="</div>";
+    h+="<div style=\"display:flex;gap:7px;flex-wrap:wrap;margin-top:4px\">";
+    h+="<button class=\"btn btnP\" onclick=\"doCloudSignIn(false)\">"+T("Sign in","Gal")+"</button>";
+    h+="<button class=\"btn\" onclick=\"doCloudSignIn(true)\">"+T("Create account","Samee akoon")+"</button>";
+    h+="</div>";
+  } else {
+    h+="<div style=\"font-size:12px;margin-bottom:4px\">"+T("Signed in as","Waxaad tahay")+" <strong>"+esc(CLOUD.email)+"</strong></div>";
+    h+="<div style=\"font-size:11px;color:#666;margin-bottom:10px\" id=\"cl_last\">"+_cloudLastText()+"</div>";
+    h+="<div style=\"display:flex;gap:7px;flex-wrap:wrap\">";
+    h+="<button class=\"btn btnP\" onclick=\"doCloudSync()\">&#8635; "+T("Sync now","Hadda isku xidh")+"</button>";
+    h+="<button class=\"btn\" onclick=\"doCloudUpload()\">&#11014; "+T("Upload this device","Soo dir qalabkan")+"</button>";
+    h+="<button class=\"btn btnR\" onclick=\"doCloudSignOut()\">"+T("Sign out of sync","Ka bax cloud")+"</button>";
+    h+="</div>";
+  }
+  return h;
+}
+function _cloudLastText(){
+  if(typeof CLOUD==="undefined")return "";
+  if(CLOUD.lastError)return "&#9888; "+esc(CLOUD.lastError);
+  if(!CLOUD.lastSync)return T("Not synced yet","Weli lama isku xidhin");
+  return T("Last synced","Markii ugu dambeysay")+": "+new Date(CLOUD.lastSync).toLocaleString();
+}
+// Small coloured dot in the Cloud sync header.
+function _cloudPaint(state){
+  var d=$("cloudDot");
+  if(d){
+    var map={ok:["#1f7a55",T("Synced","La isku xidhay")],sync:["#b7791f",T("Syncing…","Waa isku xidhayaa…")],
+              err:["#c62f16",T("Sync problem","Dhibaato")],off:["#98a2b3",T("Off","Damin")]};
+    var m=map[state]||map.off;
+    d.innerHTML="<span style=\"display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:"+m[0]+"\">"+
+                "<span style=\"width:8px;height:8px;border-radius:50%;background:"+m[0]+";display:inline-block\"></span>"+m[1]+"</span>";
+  }
+  var l=$("cl_last");if(l)l.innerHTML=_cloudLastText();
+}
+function _cloudRefresh(){
+  var b=$("cloudBox");if(b)b.innerHTML=_cloudSettingsHTML();
+  _cloudPaint(CLOUD.lastError?"err":(CLOUD.on?"ok":"off"));
+}
+function doCloudSignIn(isNew){
+  var em=($("cl_em")&&$("cl_em").value||"").trim();
+  var pw=($("cl_pw")&&$("cl_pw").value||"");
+  if(!em||!pw){toast(T("Enter email and password","Geli email iyo sirta"));return;}
+  _cloudPaint("sync");
+  cloudSignIn(em,pw,isNew).then(function(applied){
+    toast(isNew?T("Sync account created","Akoon cloud la sameeyay"):T("Signed in to sync","Cloud waad gashay"));
+    if(applied>0){
+      igAlert(T("Your cloud data has been downloaded to this device. The app will reload.",
+                "Xogtaadii cloud-ka ayaa qalabkan lagu soo dejiyay. Barnaamijku wuu dib u furmi doonaa."),
+              function(){location.reload();});
+    } else {
+      // Nothing in the cloud yet → this device becomes the starting point.
+      cloudPushAll().then(function(){_cloudRefresh();});
+      _cloudRefresh();
+    }
+  }).catch(function(e){
+    CLOUD.lastError=_cloudErrText(e.message);
+    _cloudRefresh();
+    toast(CLOUD.lastError);
+  });
+}
+function doCloudSync(){
+  cloudPull(false).then(function(n){
+    if(n>0){
+      igAlert(T("New data downloaded. The app will reload.","Xog cusub ayaa la soo dejiyay. Barnaamijku wuu dib u furmi doonaa."),
+              function(){location.reload();});
+    } else {
+      cloudFlush().then(function(){_cloudRefresh();toast(T("Up to date","Waa la wada socdaa"));});
+    }
+  });
+}
+function doCloudUpload(){
+  igConfirm(T("Send everything on THIS device to the cloud, replacing what is there?",
+              "U dir wax kasta oo QALABKAN ku jira cloud-ka, beddelna waxa jira?"),function(){
+    cloudPushAll().then(function(){_cloudRefresh();toast(T("Uploaded","La soo diray"));});
+  },T("Upload","Soo dir"));
+}
+function doCloudSignOut(){
+  igConfirm(T("Stop syncing on this device? Your data stays here.",
+              "Jooji isku xidhka qalabkan? Xogtaadu halkan way sii joogtaa."),function(){
+    cloudSignOut();_cloudRefresh();toast(T("Sync off","Cloud waa damin"));
+  },T("Sign out","Ka bax"));
 }
 
 // ============================================================
@@ -1568,6 +1671,9 @@ PAGES.settings=function(){
   h+="<button class=\"btn btnP\" onclick=\"saveSettings()\">"+T("Save settings","Keydi")+"</button>";
   h+="</div></div>";
 
+  // Cloud sync — keeps two devices in step and puts a copy off the device.
+  h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#9729; "+T("Cloud sync","Isku xidhka cloud")+"</div>"+
+     "<span id=\"cloudDot\"></span></div><div class=\"bB\" id=\"cloudBox\">"+_cloudSettingsHTML()+"</div></div>";
   // Backup / restore — the only protection against a lost or wiped device,
   // and the only way to move data between a PC and a phone.
   h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128190; "+T("Backup &amp; restore","Kayd &amp; soo celin")+"</div></div><div class=\"bB\">";

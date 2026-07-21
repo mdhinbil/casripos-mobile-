@@ -304,6 +304,13 @@
   </div>
 </div>
 
+<script src="cloud_config.js"></script>
 <script src="app.js"></script>
+<script src="cloud.js"></script>
+<script>
+  // cloud.js defines the sync layer; app.js owns the UI helpers it calls.
+  // Boot after both are parsed.
+  try { cloudBoot(); } catch (e) { console.warn("cloud boot", e); }
+</script>
 </body>
 </html>

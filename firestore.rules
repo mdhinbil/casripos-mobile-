@@ -1,0 +1,66 @@
+rules_version = '2';
+
+// ============================================================
+//  Firestore rules — Isguul AND Casri POS share one project.
+//  Paste this WHOLE file into:
+//    Firebase Console → Firestore Database → Rules → Publish
+//
+//  It keeps the existing Isguul rules unchanged and adds Casri POS.
+//  Without the casripos block below, Casri POS sync fails with
+//  "Missing or insufficient permissions".
+//
+//  Casri POS layout (see _docURL in cloud.js):
+//      casripos/{uid}/keys/{key}
+//        uid = the signed-in shop's Firebase Auth user id
+//        key = pos_prod, pos_sales, pos_inv, pos_acc, …
+//
+//  Note the difference in strength between the two apps:
+//    • Isguul uses anonymous auth, so any client holding the config can read
+//      every school. Documented limitation of that design.
+//    • Casri POS signs each shop in with its own email + password, and the
+//      rules below pin every document to that shop's own uid — so one shop
+//      genuinely cannot read another's sales, even with the config in hand.
+//      That matters: Casri POS is sold per business.
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function validDataWrite() {
+      return ('v' in request.resource.data)
+        && request.resource.size() < 950000;
+    }
+
+    // ── Casri POS ───────────────────────────────────────────
+    // A shop may only touch documents under its OWN uid.
+    match /casripos/{uid}/keys/{key} {
+      allow read:           if isAuthed() && request.auth.uid == uid;
+      allow create, update: if isAuthed() && request.auth.uid == uid && validDataWrite();
+      allow delete:         if isAuthed() && request.auth.uid == uid;
+    }
+    match /casripos/{uid} {
+      allow read:  if isAuthed() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ── Isguul (unchanged) ──────────────────────────────────
+    match /isguul/{ns}/data/{key} {
+      allow read:           if isAuthed();
+      allow create, update: if isAuthed() && validDataWrite();
+      allow delete:         if false;
+    }
+    match /isguul/{ns} {
+      allow read:  if isAuthed();
+      allow write: if false;
+    }
+
+    // Everything else denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
