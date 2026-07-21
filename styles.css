@@ -243,3 +243,45 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 
 /* Prompt/choice body text keeps its line breaks (business lists, multi-line asks) */
 #pr_text,#ch_text{white-space:pre-wrap}
+
+/* ═══ INVOICE DOCUMENT ═════════════════════════════════════════ */
+.MB.wide{max-width:720px}
+.invDoc{background:#fff;border:1px solid #dbe2ec;border-radius:9px;padding:22px;
+  margin:14px 0;font-size:12px;color:#0e1726;overflow-x:auto}
+.invHd{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:2px solid #0a1628}
+.invBiz b{display:block;font-size:17px;font-weight:800;color:#0a1628;letter-spacing:-.01em}
+.invBiz span{display:block;font-size:11px;color:#5c6b82;margin-top:2px}
+.invMeta{text-align:right;font-size:11px;color:#5c6b82;min-width:150px}
+.invMeta .lbl{font-size:19px;font-weight:800;color:#1a6ef5;letter-spacing:.04em;
+  text-transform:uppercase;margin-bottom:4px}
+.invMeta b{color:#0e1726}
+.invTo{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:14px 0}
+.invTo .blk{min-width:170px}
+.invTo .cap{font-size:9.5px;font-weight:800;color:#8b97a8;text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:4px}
+.invTo .nm{font-size:14px;font-weight:800;color:#0e1726}
+.invTo .ln{font-size:11.5px;color:#44536b}
+table.invT{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+table.invT th{background:#f2f6fc;text-align:left;padding:8px 10px;font-size:9.5px;
+  font-weight:800;color:#44536b;text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:1.5px solid #dbe2ec}
+table.invT th.num,table.invT td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.invT td{padding:9px 10px;border-bottom:1px solid #eef1f5}
+table.invT td.nm{font-weight:700}
+.invSum{display:flex;justify-content:flex-end;margin-top:12px}
+.invSum table{font-size:12.5px;min-width:240px}
+.invSum td{padding:5px 10px;font-variant-numeric:tabular-nums}
+.invSum td:last-child{text-align:right;font-weight:700}
+.invSum tr.tot td{border-top:2px solid #0a1628;font-size:16px;font-weight:800;
+  color:#0a1628;padding-top:9px}
+.invPaid{display:inline-block;margin-top:10px;padding:4px 11px;border-radius:20px;
+  font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  background:#e7f6ef;color:#1f7a55;border:1px solid #b9e3cd}
+.invFt{margin-top:18px;padding-top:12px;border-top:1px solid #eef1f5;
+  font-size:11px;color:#5c6b82;text-align:center}
+
+@media print{
+  body > *{display:none !important}
+  #printArea{display:block !important}
+}

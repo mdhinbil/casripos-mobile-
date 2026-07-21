@@ -256,6 +256,7 @@ var NAV_ALL=[
   {id:"pos",       en:"POS Terminal",  so:"Iibka",           ic:"💳"},
   {id:"products",  en:"Products",      so:"Alaabta",         ic:"📦"},
   {id:"sales",     en:"Sales History", so:"Taariikhda Iibka",ic:"📜"},
+  {id:"invoices",  en:"Invoices",      so:"Qaansheegyada",   ic:"🧾"},
   {id:"reports",   en:"Reports",       so:"Warbixinno",      ic:"📊"},
   {id:"businesses",en:"Businesses",    so:"Ganacsiyada",     ic:"🏢", admin:true},
   {id:"users",     en:"Users",         so:"Isticmaalayaal",  ic:"👥", admin:true},
@@ -711,6 +712,171 @@ function _showReceipt(sale){
   $("rec_body").textContent=_receiptText(sale);
   openM("M_rec");
 }
+
+// ============================================================
+//  INVOICES — a formal printable document for a sale.
+//  The receipt is the till slip; an invoice is the paperwork a business
+//  customer files. Same sale, different presentation, so invoices are stored
+//  as a thin record pointing at the sale rather than duplicating the items.
+// ============================================================
+var INVOICES=_load("pos_inv",[]);
+var INV_FOR_SALE=null;   // sale awaiting invoice details
+function _saveInv(){_save("pos_inv",INVOICES);}
+function _invNo(inv){return "INV-"+String(inv.no).padStart(4,"0");}
+// Per-business running number, so each shop's invoices read 0001, 0002…
+function _nextInvNo(){
+  var mine=INVOICES.filter(function(i){return i.bizId===CURRENT_BIZ_ID;});
+  return mine.reduce(function(m,i){return Math.max(m,i.no||0);},0)+1;
+}
+function openInvoiceAsk(saleId){
+  var s=SALES.find(function(x){return x.id===saleId&&x.bizId===CURRENT_BIZ_ID;});
+  if(!s){toast(T("Sale not found","Iibka lama helin"));return;}
+  var existing=INVOICES.find(function(i){return i.saleId===s.id;});
+  if(existing){showInvoice(existing.id);return;}   // one invoice per sale
+  INV_FOR_SALE=s;
+  var t=$("inv_t");if(t)t.textContent=T("Create invoice","Samee qaansheeg");
+  var sb=$("inv_s");if(sb)sb.textContent=T("A formal invoice document for this sale.","Qaansheeg rasmi ah oo iibkan ah.");
+  [["inv_cn_l",T("Customer name","Magaca macmiilka")],["inv_cp_l",T("Phone (optional)","Telefoon (ikhtiyaari)")],
+   ["inv_cd_l",T("Due date (optional)","Taariikhda bixinta (ikhtiyaari)")],["inv_ca_l",T("Address / notes (optional)","Cinwaan / xusuus (ikhtiyaari)")],
+   ["inv_cancel",T("Cancel","Jooji")],["inv_make",T("Create invoice","Samee qaansheeg")]
+  ].forEach(function(p){var e=$(p[0]);if(e)e.textContent=p[1];});
+  ["inv_cn","inv_cp","inv_cd","inv_ca"].forEach(function(id){var e=$(id);if(e)e.value="";});
+  openM("M_invask");
+  setTimeout(function(){var e=$("inv_cn");if(e)e.focus();},60);
+}
+function createInvoice(){
+  var s=INV_FOR_SALE;if(!s)return;
+  var nm=($("inv_cn")&&$("inv_cn").value||"").trim();
+  if(!nm){toast(T("Enter the customer name","Geli magaca macmiilka"));return;}
+  var inv={
+    id:"i"+Date.now(),
+    bizId:CURRENT_BIZ_ID,
+    no:_nextInvNo(),
+    saleId:s.id,
+    date:new Date().toISOString(),
+    customer:nm,
+    phone:($("inv_cp")&&$("inv_cp").value||"").trim(),
+    due:($("inv_cd")&&$("inv_cd").value||"").trim(),
+    addr:($("inv_ca")&&$("inv_ca").value||"").trim()
+  };
+  INVOICES.unshift(inv);_saveInv();
+  INV_FOR_SALE=null;
+  closeM("M_invask");
+  toast(T("Invoice created","Qaansheeg la sameeyay"));
+  showInvoice(inv.id);
+}
+function _invSale(inv){return SALES.find(function(x){return x.id===inv.saleId;})||null;}
+function _invoiceHTML(inv){
+  var s=_invSale(inv);
+  if(!s)return "<div class=\"empty\">"+T("The sale for this invoice no longer exists.","Iibka qaansheegan lama helin.")+"</div>";
+  var d=new Date(inv.date);
+  var h="<div class=\"invHd\">";
+  h+="<div class=\"invBiz\"><b>"+esc(BIZ.name||"Casri POS")+"</b>";
+  if(BIZ.addr)h+="<span>"+esc(BIZ.addr)+"</span>";
+  if(BIZ.phone)h+="<span>"+esc(BIZ.phone)+"</span>";
+  h+="</div>";
+  h+="<div class=\"invMeta\"><div class=\"lbl\">"+T("Invoice","Qaansheeg")+"</div>";
+  h+="<div><b>"+_invNo(inv)+"</b></div>";
+  h+="<div>"+T("Date","Taariikh")+": <b>"+d.toLocaleDateString()+"</b></div>";
+  if(inv.due)h+="<div>"+T("Due","Bixinta")+": <b>"+esc(inv.due)+"</b></div>";
+  h+="</div></div>";
+
+  h+="<div class=\"invTo\"><div class=\"blk\"><div class=\"cap\">"+T("Bill to","Loo qoray")+"</div>";
+  h+="<div class=\"nm\">"+esc(inv.customer)+"</div>";
+  if(inv.phone)h+="<div class=\"ln\">"+esc(inv.phone)+"</div>";
+  if(inv.addr)h+="<div class=\"ln\">"+esc(inv.addr)+"</div>";
+  h+="</div><div class=\"blk\" style=\"text-align:right\"><div class=\"cap\">"+T("Served by","Waxaa adeegay")+"</div>";
+  h+="<div class=\"ln\">"+esc(s.cashier||"-")+"</div>";
+  h+="<div class=\"cap\" style=\"margin-top:8px\">"+T("Payment","Lacag bixinta")+"</div>";
+  h+="<div class=\"ln\">"+esc(payLabel(s.payMethod||"cash"))+(s.payProvider?" ("+esc(s.payProvider)+")":"")+"</div>";
+  h+="</div></div>";
+
+  h+="<table class=\"invT\"><thead><tr><th>"+T("Description","Sharaxaad")+"</th>";
+  h+="<th class=\"num\">"+T("Qty","Tirada")+"</th><th class=\"num\">"+T("Unit","Halkii")+"</th>";
+  h+="<th class=\"num\">"+T("Amount","Qadarka")+"</th></tr></thead><tbody>";
+  (s.items||[]).forEach(function(it){
+    h+="<tr><td class=\"nm\">"+esc(it.name)+"</td><td class=\"num\">"+it.qty+"</td>";
+    h+="<td class=\"num\">"+money(it.price)+"</td><td class=\"num\">"+money(it.price*it.qty)+"</td></tr>";
+  });
+  h+="</tbody></table>";
+
+  h+="<div class=\"invSum\"><table><tr><td>"+T("Subtotal","Wadarta")+"</td><td>"+money(s.subtotal)+"</td></tr>";
+  if(s.tax>0)h+="<tr><td>"+T("Tax","Canshuurta")+"</td><td>"+money(s.tax)+"</td></tr>";
+  h+="<tr class=\"tot\"><td>"+T("TOTAL","WADARTA")+"</td><td>"+money(s.total)+"</td></tr></table></div>";
+  h+="<div style=\"text-align:right\"><span class=\"invPaid\">&#10003; "+T("Paid","La bixiyay")+"</span></div>";
+  h+="<div class=\"invFt\">"+T("Thank you for your business.","Mahadsanid ganacsigaaga.")+"</div>";
+  return h;
+}
+var INV_OPEN=null;
+function showInvoice(id){
+  var inv=INVOICES.find(function(i){return i.id===id;});if(!inv)return;
+  INV_OPEN=id;
+  var t=$("invv_t");if(t)t.textContent=T("Invoice","Qaansheeg")+" "+_invNo(inv);
+  var c=$("invv_close");if(c)c.textContent=T("Close","Xir");
+  var p=$("invv_print");if(p)p.innerHTML="&#128424; "+T("Print","Daabac");
+  var w=$("invv_wa");if(w)w.innerHTML="&#128241; "+T("WhatsApp","WhatsApp");
+  var d=$("inv_doc");if(d)d.innerHTML=_invoiceHTML(inv);
+  openM("M_inv");
+}
+function printInvoice(){
+  var d=$("inv_doc");if(!d)return;
+  // Print in page — window.open popups are blocked in the app's WebView.
+  var pa=$("printArea");
+  if(!pa){pa=document.createElement("div");pa.id="printArea";document.body.appendChild(pa);}
+  pa.innerHTML="<div class=\"invDoc\" style=\"border:none;padding:0\">"+d.innerHTML+"</div>";
+  try{window.print();}catch(e){toast(T("Printing not available here","Daabacaadu halkan ma shaqeyso"));}
+}
+// Send the invoice as plain text — works even where printing doesn't.
+function shareInvoiceWA(){
+  var inv=INVOICES.find(function(i){return i.id===INV_OPEN;});if(!inv)return;
+  var s=_invSale(inv);if(!s)return;
+  var L=[];
+  L.push("*"+(BIZ.name||"Casri POS")+"*");
+  L.push(T("Invoice","Qaansheeg")+" "+_invNo(inv)+" — "+new Date(inv.date).toLocaleDateString());
+  L.push(T("Bill to","Loo qoray")+": "+inv.customer);
+  L.push("");
+  (s.items||[]).forEach(function(it){L.push(it.name+"  "+it.qty+" x "+money(it.price)+"  = "+money(it.price*it.qty));});
+  L.push("");
+  if(s.tax>0)L.push(T("Subtotal","Wadarta")+": "+money(s.subtotal));
+  if(s.tax>0)L.push(T("Tax","Canshuurta")+": "+money(s.tax));
+  L.push("*"+T("TOTAL","WADARTA")+": "+money(s.total)+"*");
+  var url="https://wa.me/"+(inv.phone||"").replace(/[^0-9]/g,"")+"?text="+encodeURIComponent(L.join("\n"));
+  try{window.open(url,"_blank");}catch(e){toast(T("Could not open WhatsApp","WhatsApp lama furi karo"));}
+}
+async function delInvoice(id){
+  var inv=INVOICES.find(function(i){return i.id===id;});if(!inv)return;
+  if(!await igAsk(T("Delete invoice ","Tirtir qaansheegga ")+_invNo(inv)+"?"))return;
+  INVOICES=INVOICES.filter(function(i){return i.id!==id;});
+  _saveInv();renderPage("invoices");
+  toast(T("Invoice deleted","Qaansheeg la tirtiray"));
+}
+PAGES.invoices=function(){
+  var mine=INVOICES.filter(function(i){return i.bizId===CURRENT_BIZ_ID;});
+  var tot=mine.reduce(function(a,i){var s=_invSale(i);return a+(s?s.total:0);},0);
+  var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Invoices","Qaansheegyada")+"</div>";
+  h+="<div class=\"phS\">"+esc(BIZ.name)+" &middot; "+mine.length+" "+T("invoices","qaansheeg")+" &middot; "+money(tot)+"</div></div></div>";
+  h+="<div class=\"box\"><div class=\"bB\" style=\"padding:11px 16px;font-size:12px;color:#5c6b82\">";
+  h+="&#128161; "+T("Make an invoice from any sale — open Sales History and press the invoice button.",
+                   "Ka samee qaansheeg iib kasta — fur Taariikhda Iibka oo riix badhanka qaansheegga.")+"</div></div>";
+  h+="<div class=\"box\"><table><thead><tr><th>"+T("No.","Lam.")+"</th><th>"+T("Date","Taariikh")+"</th>";
+  h+="<th>"+T("Customer","Macmiilka")+"</th><th>"+T("Total","Wadarta")+"</th><th></th></tr></thead><tbody>";
+  if(!mine.length){
+    h+="<tr><td colspan=\"5\"><div class=\"empty\"><div class=\"emIc\">&#129534;</div>"+T("No invoices yet","Qaansheeg ma jiro weli")+"</div></td></tr>";
+  } else {
+    mine.forEach(function(i){
+      var s=_invSale(i);
+      h+="<tr><td><strong>"+_invNo(i)+"</strong></td>";
+      h+="<td>"+new Date(i.date).toLocaleDateString()+"</td>";
+      h+="<td><strong>"+esc(i.customer)+"</strong>"+(i.phone?"<div style=\"font-size:10px;color:#5c6b82\">"+esc(i.phone)+"</div>":"")+"</td>";
+      h+="<td><strong style=\"color:#1152cc\">"+(s?money(s.total):"—")+"</strong></td>";
+      h+="<td style=\"text-align:right;white-space:nowrap\">";
+      h+="<button class=\"btn\" onclick=\"showInvoice('"+i.id+"')\">&#128065;</button> ";
+      h+="<button class=\"btn btnR\" onclick=\"delInvoice('"+i.id+"')\">&#10005;</button></td></tr>";
+    });
+  }
+  h+="</tbody></table></div>";
+  return h;
+};
 function printReceipt(){
   // Print IN PAGE rather than via window.open — popups are blocked in the
   // Android WebView the APK runs in, so the old version silently did nothing.
@@ -842,7 +1008,10 @@ PAGES.sales=function(){
          (s.payProvider?"<div style=\"font-size:10px;color:#5c6b82;margin-top:2px\">"+esc(s.payProvider)+"</div>":"")+"</td>";
       h+="<td>"+esc(s.cashier||"-")+"</td>";
       h+="<td><strong style=\"color:#1a6ef5\">"+money(s.total)+"</strong></td>";
-      h+="<td><button class=\"btn\" onclick=\"_viewSale('"+s.id+"')\">&#128424;</button></td></tr>";
+      var _hasInv=INVOICES.find(function(i){return i.saleId===s.id;});
+      h+="<td style=\"white-space:nowrap\"><button class=\"btn\" onclick=\"_viewSale('"+s.id+"')\" title=\""+T("Receipt","Risiidh")+"\">&#128424;</button> ";
+      h+="<button class=\"btn"+(_hasInv?" btnP":"")+"\" onclick=\"openInvoiceAsk('"+s.id+"')\" title=\""+
+         (_hasInv?T("View invoice","Eeg qaansheegga"):T("Create invoice","Samee qaansheeg"))+"\">&#129534;</button></td></tr>";
     });
   }
   h+="</tbody></table></div>";
