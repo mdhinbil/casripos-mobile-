@@ -171,6 +171,20 @@
   </div>
 </div>
 
+<!-- Restore from backup -->
+<div class="MOv" id="M_backup">
+  <div class="MB">
+    <button class="MC" onclick="closeM('M_backup')">&#10005;</button>
+    <div class="MT" id="bk_t">Restore from backup</div>
+    <div class="MS" id="bk_s">This REPLACES everything on this device.</div>
+    <div class="fi"><input type="file" id="bk_file" accept="application/json,.json"
+      onchange="importBackupFile(this)"></div>
+    <div class="MF">
+      <button class="btn" onclick="closeM('M_backup')" id="bk_cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Barcode label sheet -->
 <div class="MOv" id="M_labels">
   <div class="MB wide">

@@ -714,6 +714,87 @@ function _showReceipt(sale){
 }
 
 // ============================================================
+//  BACKUP / RESTORE
+//  Casri POS keeps everything in this device's localStorage — there is no
+//  server. So a lost or wiped phone means every sale and product is gone, and
+//  data can't move from a PC to a till. Export writes one .json holding all of
+//  it; Import restores it on any device.
+// ============================================================
+var BACKUP_KEYS=["pos_biz_list","pos_current_biz","pos_prod","pos_sales","pos_inv","pos_acc","pos_fx","pos_biz"];
+var BACKUP_VERSION=1;
+function _backupObject(){
+  var data={};
+  BACKUP_KEYS.forEach(function(k){
+    try{var v=localStorage.getItem(k);if(v!==null)data[k]=v;}catch(e){}
+  });
+  return {
+    app:"CasriPOS",
+    version:BACKUP_VERSION,
+    exportedAt:new Date().toISOString(),
+    businesses:(BIZ_LIST||[]).length,
+    products:(PRODUCTS||[]).length,
+    sales:(SALES||[]).length,
+    data:data
+  };
+}
+function exportBackup(){
+  try{
+    var obj=_backupObject();
+    var name="casripos-backup-"+new Date().toISOString().slice(0,10)+".json";
+    var blob=new Blob([JSON.stringify(obj,null,1)],{type:"application/json"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);a.remove();},400);
+    toast(T("Backup saved: ","Kayd la keydiyay: ")+name);
+  }catch(e){
+    // Some WebViews block blob downloads — offer the raw text instead so the
+    // user can still copy it out rather than losing the option entirely.
+    igAlert(T("This device blocked the download. Copy the text below and save it yourself.",
+              "Qalabkani wuu diiday soo dejinta. Koobi qoraalka hoose oo keydso.")+
+            "\n\n"+JSON.stringify(_backupObject()),null,T("Backup","Kayd"));
+  }
+}
+function openImport(){
+  var f=$("bk_file");if(f)f.value="";
+  var t=$("bk_t");if(t)t.textContent=T("Restore from backup","Ka soo celi kayd");
+  var s=$("bk_s");if(s)s.textContent=T("This REPLACES everything on this device. Export a backup first if unsure.",
+                                       "Tani way BEDDESHAA wax kasta oo qalabkan ku jira. Marka hore kayd samee haddaad shakisan tahay.");
+  var c=$("bk_cancel");if(c)c.textContent=T("Cancel","Jooji");
+  openM("M_backup");
+}
+function importBackupFile(input){
+  var file=input&&input.files&&input.files[0];
+  if(!file)return;
+  var r=new FileReader();
+  r.onload=async function(){
+    var obj;
+    try{obj=JSON.parse(r.result);}
+    catch(e){toast(T("That file isn't a valid backup","Faylkaasi ma aha kayd sax ah"));return;}
+    if(!obj||obj.app!=="CasriPOS"||!obj.data){
+      toast(T("That file isn't a Casri POS backup","Faylkaasi ma aha kayd Casri POS"));return;
+    }
+    var when=obj.exportedAt?new Date(obj.exportedAt).toLocaleString():"?";
+    var msg=T("Restore this backup?\n\n","Soo celi kaydkan?\n\n")+
+            T("Made","La sameeyay")+": "+when+"\n"+
+            (obj.businesses||0)+" "+T("businesses","ganacsi")+", "+
+            (obj.products||0)+" "+T("products","alaab")+", "+
+            (obj.sales||0)+" "+T("sales","iib")+"\n\n"+
+            T("Everything currently on this device will be replaced.","Wax kasta oo hadda qalabkan ku jira waa la beddeli doonaa.");
+    if(!await igAsk(msg,T("Restore","Soo celi")))return;
+    try{
+      Object.keys(obj.data).forEach(function(k){
+        if(BACKUP_KEYS.indexOf(k)>=0)localStorage.setItem(k,obj.data[k]);
+      });
+    }catch(e){toast(T("Could not write the data","Xogta lama qori karin"));return;}
+    closeM("M_backup");
+    igAlert(T("Backup restored. The app will reload.","Kaydka waa la soo celiyay. Barnaamijku wuu dib u furmi doonaa."),
+            function(){location.reload();});
+  };
+  r.readAsText(file);
+}
+
+// ============================================================
 //  BARCODE LABELS — Code 128-B drawn as inline SVG.
 //  Self-contained on purpose: the app is bundled offline, so pulling in a
 //  barcode library would mean vendoring a file and trusting it. Code 128-B
@@ -1487,6 +1568,16 @@ PAGES.settings=function(){
   h+="<button class=\"btn btnP\" onclick=\"saveSettings()\">"+T("Save settings","Keydi")+"</button>";
   h+="</div></div>";
 
+  // Backup / restore — the only protection against a lost or wiped device,
+  // and the only way to move data between a PC and a phone.
+  h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128190; "+T("Backup &amp; restore","Kayd &amp; soo celin")+"</div></div><div class=\"bB\">";
+  h+="<div style=\"font-size:11px;color:#666;margin-bottom:9px\">"+
+     T("Everything is stored on THIS device only. Export a backup regularly — if the phone is lost or reset, it is the only way to get your sales and products back. You can also import it on another device.",
+       "Wax kastaa waxay ku kaydsan yihiin QALABKAN oo kaliya. Si joogto ah u samee kayd — haddii taleefanku lumo ama la nadiifiyo, kaydka oo kaliya ayaa iibkaaga iyo alaabtaada soo celin kara. Sidoo kale qalab kale ayaad ku soo celin kartaa.")+"</div>";
+  h+="<div style=\"display:flex;gap:7px;flex-wrap:wrap\">";
+  h+="<button class=\"btn btnP\" onclick=\"exportBackup()\">&#11015; "+T("Export backup","Samee kayd")+"</button>";
+  h+="<button class=\"btn\" onclick=\"openImport()\">&#11014; "+T("Import backup","Soo celi kayd")+"</button>";
+  h+="</div></div></div>";
   // Sample products loader — gives a Restaurant/Cafe/Bar/Retail menu in one click
   h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128218; "+T("Load sample products","Soo dejiso alaab tijaabo ah")+"</div></div><div class=\"bB\">";
   h+="<div style=\"font-size:11px;color:#666;margin-bottom:9px\">"+T("Quickly populate the catalog with a starter menu for your business type. Adds; doesn't delete.","Si dhaqsa ah u buuxi alaabta nooca ganacsigaaga. Wuxuu ku darayaa; ma tirtirayo.")+"</div>";
