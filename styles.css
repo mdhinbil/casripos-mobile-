@@ -215,6 +215,9 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
   body > *{display:none !important}
   #printArea{display:block !important;font-family:ui-monospace,'Courier New',monospace;
     font-size:12px;line-height:1.5;white-space:pre;margin:0;padding:0;color:#000}
+  /* Labels and invoices are laid-out HTML, not a monospace slip — the receipt
+     rules above would force pre-wrap monospace on them and destroy the layout. */
+  #printArea.labelMode,#printArea.docMode{font-family:inherit;white-space:normal;font-size:inherit}
 }
 
 /* ═══ PAYMENT ══════════════════════════════════════════════════ */
@@ -285,3 +288,25 @@ table.invT td.nm{font-weight:700}
   body > *{display:none !important}
   #printArea{display:block !important}
 }
+
+/* ═══ BARCODE LABELS ═══════════════════════════════════════════ */
+.lblList{max-height:46vh;overflow-y:auto;border:1px solid #dbe2ec;border-radius:9px}
+.lblRow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eef1f5}
+.lblRow:last-child{border-bottom:none}
+.lblNm{flex:1;min-width:0}
+.lblNm strong{font-size:12.5px;color:#0a1628}
+.lblCode{font-family:ui-monospace,monospace;font-size:11px;color:#5c6b82;margin-top:1px}
+.lblRow input{width:74px;flex:none;text-align:center;font-weight:700}
+.lblRow input:disabled{background:#f2f4f7;color:#98a2b3}
+
+/* the printable sheet */
+.lblSheet{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;padding:6mm}
+.lbl{border:1px dashed #b9c2d0;border-radius:2mm;padding:3mm 2mm;text-align:center;
+  page-break-inside:avoid;break-inside:avoid;background:#fff}
+.lblBiz{font-size:7pt;color:#5c6b82;text-transform:uppercase;letter-spacing:.05em}
+.lblPn{font-size:9.5pt;font-weight:800;color:#0a1628;margin:1mm 0;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bcSvg{display:block;width:100%;height:34px}
+.lblTxt{font-family:ui-monospace,monospace;font-size:8pt;letter-spacing:.08em;color:#0a1628;margin-top:.5mm}
+.lblPr{font-size:12pt;font-weight:800;color:#0a1628;margin-top:1mm}
+@media print{ .lblSheet{gap:3mm;padding:4mm} .lbl{border-color:#ccc} }

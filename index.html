@@ -171,6 +171,23 @@
   </div>
 </div>
 
+<!-- Barcode label sheet -->
+<div class="MOv" id="M_labels">
+  <div class="MB wide">
+    <button class="MC" onclick="closeM('M_labels')">&#10005;</button>
+    <div class="MT" id="lbl_t">Print barcode labels</div>
+    <div class="MS" id="lbl_s">Choose how many labels to print for each product.</div>
+    <div style="margin:10px 0">
+      <button class="btn" onclick="assignMissingBarcodes()" id="lbl_gen">Generate codes for products without one</button>
+    </div>
+    <div id="lbl_list" class="lblList"></div>
+    <div class="MF">
+      <button class="btn" onclick="closeM('M_labels')" id="lbl_cancel">Close</button>
+      <button class="btn btnP" onclick="printLabels()" id="lbl_print">&#128424; Print</button>
+    </div>
+  </div>
+</div>
+
 <!-- Invoice details — asked before generating a formal A4 invoice -->
 <div class="MOv" id="M_invask">
   <div class="MB">

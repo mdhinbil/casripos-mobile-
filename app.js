@@ -714,6 +714,124 @@ function _showReceipt(sale){
 }
 
 // ============================================================
+//  BARCODE LABELS — Code 128-B drawn as inline SVG.
+//  Self-contained on purpose: the app is bundled offline, so pulling in a
+//  barcode library would mean vendoring a file and trusting it. Code 128-B
+//  covers every character a SKU or product code realistically uses.
+// ============================================================
+var _BC128=[
+ "212222","222122","222221","121223","121322","131222","122213","122312","132212","221213",
+ "221312","231212","112232","122132","122231","113222","123122","123221","223211","221132",
+ "221231","213212","223112","312131","311222","321122","321221","312212","322112","322211",
+ "212123","212321","232121","111323","131123","131321","112313","132113","132311","211313",
+ "231113","231311","112133","112331","132131","113123","113321","133121","313121","211331",
+ "231131","213113","213311","213131","311123","311321","331121","312113","312311","332111",
+ "314111","221411","431111","111224","111422","121124","121421","141122","141221","112214",
+ "112412","122114","122411","142112","142211","241211","221114","413111","241112","134111",
+ "111242","121142","121241","114212","124112","124211","411212","421112","421211","212141",
+ "214121","412121","111143","111341","131141","114113","114311","411113","411311","113141",
+ "114131","311141","411131","211412","211214","211232","2331112"];
+// Code 128-B is valid for ASCII 32..126 only.
+function bcValid(s){s=String(s||"");if(!s)return false;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if(c<32||c>126)return false;}return true;}
+function _bc128Widths(text){
+  var vals=[104],i;                                  // 104 = START B
+  for(i=0;i<text.length;i++)vals.push(text.charCodeAt(i)-32);
+  var sum=104;
+  for(i=1;i<vals.length;i++)sum+=vals[i]*i;
+  vals.push(sum%103);                                // checksum
+  vals.push(106);                                    // STOP
+  var w="";
+  for(i=0;i<vals.length;i++)w+=_BC128[vals[i]];
+  return w;
+}
+// Render as SVG: bars alternate starting with a bar, widths are module counts.
+function bcSVG(text,mod,height){
+  text=String(text||"");
+  if(!bcValid(text))return "";
+  mod=mod||2;height=height||38;
+  var w=_bc128Widths(text),x=10*mod,bars="",isBar=true;   // 10-module quiet zone
+  for(var i=0;i<w.length;i++){
+    var n=parseInt(w.charAt(i),10)*mod;
+    if(isBar)bars+="<rect x=\""+x+"\" y=\"0\" width=\""+n+"\" height=\""+height+"\"/>";
+    x+=n;isBar=!isBar;
+  }
+  var total=x+10*mod;
+  return "<svg class=\"bcSvg\" viewBox=\"0 0 "+total+" "+height+"\" width=\"100%\" height=\""+height+
+         "\" preserveAspectRatio=\"xMidYMid meet\" shape-rendering=\"crispEdges\" role=\"img\" aria-label=\""+esc(text)+"\">"+
+         "<rect width=\""+total+"\" height=\""+height+"\" fill=\"#fff\"/>"+bars+"</svg>";
+}
+// A product with no code can't be labelled. Give it a unique numeric one.
+function _genBarcode(){
+  var used={};forBiz(PRODUCTS).forEach(function(p){if(p.barcode)used[p.barcode]=1;});
+  var base=Date.now()%100000;
+  for(var i=0;i<100000;i++){
+    var code=String(200000+((base+i)%800000));
+    if(!used[code])return code;
+  }
+  return String(Date.now());
+}
+async function assignMissingBarcodes(){
+  var missing=forBiz(PRODUCTS).filter(function(p){return !p.barcode&&!p.sku;});
+  if(!missing.length){toast(T("Every product already has a code","Alaab kastaa waa leedahay lambar"));return;}
+  if(!await igAsk(T("Give a barcode to ","Sii barcode ")+missing.length+T(" product(s) without one?"," alaabo oo aan lahayn?"),T("Generate","Samee")))return;
+  missing.forEach(function(p){p.barcode=_genBarcode();});
+  _save("pos_prod",PRODUCTS);
+  toast(missing.length+" "+T("barcodes generated","barcode la sameeyay"));
+  openLabels();
+}
+// ── Label sheet ─────────────────────────────────────────────
+var LBL_QTY={};
+function openLabels(){
+  var list=forBiz(PRODUCTS);
+  if(!list.length){toast(T("No products yet","Alaab ma jirto weli"));return;}
+  var t=$("lbl_t");if(t)t.textContent=T("Print barcode labels","Daabac summadaha barcode");
+  var s=$("lbl_s");if(s)s.textContent=T("Choose how many labels to print for each product.","Dooro immisa summad alaab kasta loo daabaco.");
+  var g=$("lbl_gen");if(g)g.textContent=T("Generate codes for products without one","Samee lambar alaabta aan lahayn");
+  var c=$("lbl_cancel");if(c)c.textContent=T("Close","Xir");
+  var p=$("lbl_print");if(p)p.innerHTML="&#128424; "+T("Print","Daabac");
+  var box=$("lbl_list");
+  if(box){
+    var h="";
+    list.forEach(function(pr){
+      var code=pr.barcode||pr.sku||"";
+      var ok=bcValid(code);
+      h+="<div class=\"lblRow\">";
+      h+="<div class=\"lblNm\"><strong>"+(pr.icon||"&#128230;")+" "+esc(pr.name)+"</strong>";
+      h+="<div class=\"lblCode\">"+(ok?esc(code):"<span style=\"color:#c62f16\">"+T("no code","lambar ma leh")+"</span>")+"</div></div>";
+      h+="<input type=\"number\" min=\"0\" max=\"200\" value=\""+(LBL_QTY[pr.id]||0)+"\""+(ok?"":" disabled")+
+         " onchange=\"LBL_QTY['"+pr.id+"']=parseInt(this.value)||0\">";
+      h+="</div>";
+    });
+    box.innerHTML=h;
+  }
+  openM("M_labels");
+}
+function _labelHTML(pr,code){
+  return "<div class=\"lbl\">"+
+    "<div class=\"lblBiz\">"+esc(BIZ.name||"")+"</div>"+
+    "<div class=\"lblPn\">"+esc(pr.name)+"</div>"+
+    bcSVG(code,2,34)+
+    "<div class=\"lblTxt\">"+esc(code)+"</div>"+
+    "<div class=\"lblPr\">"+money(pr.price)+"</div>"+
+  "</div>";
+}
+function printLabels(){
+  var list=forBiz(PRODUCTS),cells=[],total=0;
+  list.forEach(function(pr){
+    var n=LBL_QTY[pr.id]||0;
+    var code=pr.barcode||pr.sku||"";
+    if(n>0&&bcValid(code)){for(var i=0;i<n;i++){cells.push(_labelHTML(pr,code));total++;}}
+  });
+  if(!total){toast(T("Set how many labels to print","Dooro immisa summad"));return;}
+  var pa=$("printArea");
+  if(!pa){pa=document.createElement("div");pa.id="printArea";document.body.appendChild(pa);}
+  // labelMode stops the receipt's monospace print rule applying to labels
+  pa.className="labelMode";
+  pa.innerHTML="<div class=\"lblSheet\">"+cells.join("")+"</div>";
+  try{window.print();}catch(e){toast(T("Printing not available here","Daabacaadu halkan ma shaqeyso"));}
+}
+
+// ============================================================
 //  INVOICES — a formal printable document for a sale.
 //  The receipt is the till slip; an invoice is the paperwork a business
 //  customer files. Same sale, different presentation, so invoices are stored
@@ -823,6 +941,7 @@ function printInvoice(){
   // Print in page — window.open popups are blocked in the app's WebView.
   var pa=$("printArea");
   if(!pa){pa=document.createElement("div");pa.id="printArea";document.body.appendChild(pa);}
+  pa.className="docMode";   // not the monospace receipt slip
   pa.innerHTML="<div class=\"invDoc\" style=\"border:none;padding:0\">"+d.innerHTML+"</div>";
   try{window.print();}catch(e){toast(T("Printing not available here","Daabacaadu halkan ma shaqeyso"));}
 }
@@ -885,6 +1004,7 @@ function printReceipt(){
   if(!txt){toast(T("Nothing to print","Waxba lama daabici karo"));return;}
   var pa=$("printArea");
   if(!pa){pa=document.createElement("pre");pa.id="printArea";document.body.appendChild(pa);}
+  pa.className="";          // plain monospace slip
   pa.textContent=txt;
   try{window.print();}
   catch(e){toast(T("Printing not available here","Daabacaadu halkan ma shaqeyso"));}
@@ -897,7 +1017,10 @@ var EDIT_PROD=null;
 PAGES.products=function(){
   var bizProducts=forBiz(PRODUCTS);
   var h="<div class=\"ph\"><div><div class=\"phT\">"+T("Products","Alaabta")+"</div><div class=\"phS\">"+esc(BIZ.name)+" &middot; "+bizProducts.length+" "+T("items","alaabta")+"</div></div>";
-  h+="<div class=\"phA\"><button class=\"btn btnP\" onclick=\"openAddProduct()\">+ "+T("Add product","Ku dar alaab")+"</button></div></div>";
+  h+="<div class=\"phA\">";
+  h+="<button class=\"btn\" onclick=\"openLabels()\">&#127991; "+T("Print labels","Daabac summado")+"</button>";
+  h+="<button class=\"btn btnP\" onclick=\"openAddProduct()\">+ "+T("Add product","Ku dar alaab")+"</button>";
+  h+="</div></div>";
   h+="<div class=\"box\"><table><thead><tr><th>"+T("Product","Alaabta")+"</th><th>"+T("Barcode / SKU","Barcode / SKU")+"</th><th>"+T("Category","Qaybta")+"</th><th>"+T("Price","Qiimaha")+"</th><th>"+T("Stock","Kayd")+"</th><th></th></tr></thead><tbody>";
   if(!bizProducts.length){h+="<tr><td colspan=\"6\"><div class=\"empty\"><div class=\"emIc\">&#128230;</div>"+T("No products yet","Alaab ma jirto weli")+"</div></td></tr>";}
   else{
