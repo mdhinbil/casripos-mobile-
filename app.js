@@ -778,6 +778,9 @@ function doCloudSignIn(isNew){
   _cloudPaint("sync");
   cloudSignIn(em,pw,isNew).then(async function(remote){
     toast(isNew?T("Sync account created","Akoon cloud la sameeyay"):T("Signed in to sync","Cloud waad gashay"));
+    // Seed the recovery email from the sync account, so a shop that uses cloud
+    // sync gets the password-reset route working without extra setup.
+    if(!recoveryEmail())setRecoveryEmail(em);
     var local=cloudLocalInfo();
     // Nothing in the cloud yet → this device seeds it. Safe: nothing to lose.
     if(!remote.has){
@@ -903,10 +906,43 @@ function recoverFromBackup(input){
   };
   r.readAsText(file);
 }
+// The shop's recovery email. Set in Settings, or captured automatically the
+// first time they sign in to cloud sync.
+function recoveryEmail(){try{return (localStorage.getItem("pos_recovery_email")||"").trim();}catch(e){return "";}}
+function setRecoveryEmail(v){
+  try{
+    // Stored raw (not JSON) — backup and sync both copy the raw string. Stamp
+    // and queue it by hand since it doesn't go through _save().
+    localStorage.setItem("pos_recovery_email",(v||"").trim());
+    localStorage.setItem("pos_ts_pos_recovery_email",String(Date.now()));
+    if(typeof cloudQueue==="function")cloudQueue("pos_recovery_email");
+  }catch(e){}
+}
+function saveRecoveryEmail(){
+  var v=(($("set_rmail")&&$("set_rmail").value)||"").trim();
+  if(v&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){toast(T("That email doesn't look right","Email-kaasi sax uma eka"));return;}
+  setRecoveryEmail(v);
+  toast(v?T("Recovery email saved","Email-ka waa la keydiyay"):T("Recovery email cleared","Email-ka waa la saaray"));
+  renderPage("settings");
+}
 async function recoverResetAdmin(){
+  var want=recoveryEmail();
+  // Without a known email there is nothing to check against, so this route is
+  // closed rather than left open to whoever is holding the phone.
+  if(!want){
+    igAlert(T("This till has no recovery email set, so the password cannot be reset this way.\n\nUse option 1 or 2 above. To enable this for next time, set a recovery email in Settings → Security once you are signed in.",
+              "Tilligan email soo celin ma laha, sidaas darteed furaha sidan lagama bedeli karo.\n\nIsticmaal doorka 1 ama 2. Si aad marka xigta u suurtogeliso, Settings → Security ka deji email."));
+    return;
+  }
+  var got=(($("rc_mail")&&$("rc_mail").value)||"").trim();
+  if(!got){toast(T("Enter the recovery email","Geli email-ka soo celinta"));return;}
+  if(got.toLowerCase()!==want.toLowerCase()){
+    toast(T("That is not this shop's recovery email","Kaasi ma aha email-ka dukaankan"));
+    return;
+  }
   if(!await igAsk(
-      T("Reset the admin password on this device?\n\nProducts, sales and invoices are NOT deleted. Anyone holding this phone can do this, so change the password afterwards.",
-        "Dib u deji furaha admin-ka qalabkan?\n\nAlaabta, iibka iyo qaansheegyada MA tirtiraysid. Qof kasta oo taleefankan haysta wuu samayn karaa, markaa beddel furaha ka dib."),
+      T("Reset the admin password on this device?\n\nProducts, sales and invoices are NOT deleted.",
+        "Dib u deji furaha admin-ka qalabkan?\n\nAlaabta, iibka iyo qaansheegyada MA tirtiraysid."),
       T("Reset","Dib u deji")))return;
   var pass="casri"+Math.floor(1000+Math.random()*9000);
   var list=[];
@@ -928,7 +964,7 @@ async function recoverResetAdmin(){
 //  data can't move from a PC to a till. Export writes one .json holding all of
 //  it; Import restores it on any device.
 // ============================================================
-var BACKUP_KEYS=["pos_biz_list","pos_current_biz","pos_prod","pos_sales","pos_inv","pos_acc","pos_fx","pos_biz"];
+var BACKUP_KEYS=["pos_biz_list","pos_current_biz","pos_prod","pos_sales","pos_inv","pos_acc","pos_fx","pos_biz","pos_recovery_email"];
 var BACKUP_VERSION=1;
 function _backupObject(){
   var data={};
@@ -1776,6 +1812,21 @@ PAGES.settings=function(){
   h+="<button class=\"btn btnP\" onclick=\"saveSettings()\">"+T("Save settings","Keydi")+"</button>";
   h+="</div></div>";
 
+  // Recovery email — the proof required to reset the admin password from the
+  // login screen. Without it that route stays closed.
+  if(isSuperAdmin()||isBizAdmin()){
+    var _rmail=recoveryEmail();
+    h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128274; "+T("Security","Amniga")+"</div>"+
+       (_rmail?"":"<span class=\"bdg ba\">"+T("not set","lama dejin")+"</span>")+"</div><div class=\"bB\">";
+    h+="<div style=\"font-size:11px;color:#666;margin-bottom:9px\">"+
+       T("If the admin password is ever forgotten, this email must be typed on the login screen before the password can be reset. Without it, nobody can reset the password on this device — including you.",
+         "Haddii furaha admin-ka la illoobo, email-kan waa in la qoraa bogga gelitaanka ka hor inta aan furaha dib loo dejin. La'aantiis, cidna furaha kama beddeli karto qalabkan — adiga oo kale.")+"</div>";
+    h+="<div style=\"display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end;max-width:460px\">";
+    h+="<div class=\"fi\" style=\"flex:1;min-width:200px;margin:0\"><label>"+T("Recovery email","Email soo celin")+"</label>";
+    h+="<input type=\"email\" id=\"set_rmail\" value=\""+esc(_rmail)+"\" placeholder=\"owner@example.com\"></div>";
+    h+="<button class=\"btn btnP\" onclick=\"saveRecoveryEmail()\">"+T("Save","Keydi")+"</button>";
+    h+="</div></div></div>";
+  }
   // Cloud sync — keeps two devices in step and puts a copy off the device.
   h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#9729; "+T("Cloud sync","Isku xidhka cloud")+"</div>"+
      "<span id=\"cloudDot\"></span></div><div class=\"bB\" id=\"cloudBox\">"+_cloudSettingsHTML()+"</div></div>";

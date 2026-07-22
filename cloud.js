@@ -34,7 +34,7 @@ var CLOUD = {
 };
 
 var CLOUD_KEYS = ["pos_biz_list", "pos_current_biz", "pos_prod", "pos_sales",
-                  "pos_inv", "pos_acc", "pos_fx"];
+                  "pos_inv", "pos_acc", "pos_fx", "pos_recovery_email"];
 
 // ── config + session persistence ────────────────────────────
 function cloudLoad() {
