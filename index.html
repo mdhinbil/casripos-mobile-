@@ -22,6 +22,7 @@
     <div class="lp-row"><span class="ic">&#128100;</span><input type="text" id="loginUser" placeholder="Username" autocomplete="username"></div>
     <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"></div>
     <button class="lp-btn" onclick="doLogin()">Sign in</button>
+    <div class="lp-forgot"><a href="javascript:void(0)" onclick="openRecover()" id="lp_forgot">Forgot password?</a></div>
     <div class="lp-hint">Demo: <code>admin</code> / <code>admin123</code></div>
   </div>
 </div>
@@ -168,6 +169,39 @@
       <button class="btn" onclick="closeM('M_pay')" id="pay_cancel">Cancel</button>
       <button class="btn btnG" onclick="confirmPayment()" id="pay_done">Complete sale</button>
     </div>
+  </div>
+</div>
+
+<!-- Locked out of the till — recovery -->
+<div class="MOv" id="M_recover">
+  <div class="MB">
+    <button class="MC" onclick="closeM('M_recover')">&#10005;</button>
+    <div class="MT" id="rc_t">Can't sign in?</div>
+    <div class="MS" id="rc_s">Pick whichever you have.</div>
+
+    <div class="rcOpt">
+      <div class="rcH" id="rc_1h">1. Restore your staff logins from cloud sync</div>
+      <div class="rcD" id="rc_1d">If this shop uses cloud sync, sign in with that email and password.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="fi"><input type="email" id="rc_em" placeholder="sync email" autocomplete="username"></div>
+        <div class="fi"><input type="password" id="rc_pw" placeholder="sync password" autocomplete="current-password"></div>
+      </div>
+      <button class="btn btnP" onclick="recoverFromCloud()" id="rc_1b">Restore logins</button>
+    </div>
+
+    <div class="rcOpt">
+      <div class="rcH" id="rc_2h">2. Restore from a backup file</div>
+      <div class="rcD" id="rc_2d">Pick a backup you exported earlier. Only the staff logins are restored.</div>
+      <div class="fi"><input type="file" id="rc_file" accept="application/json,.json" onchange="recoverFromBackup(this)"></div>
+    </div>
+
+    <div class="rcOpt rcDanger">
+      <div class="rcH" id="rc_3h">3. Last resort — reset the admin password</div>
+      <div class="rcD" id="rc_3d">Use only if you have neither of the above. Your products and sales are kept.</div>
+      <button class="btn btnR" onclick="recoverResetAdmin()" id="rc_3b">Reset admin password</button>
+    </div>
+
+    <div class="MF"><button class="btn" onclick="closeM('M_recover')" id="rc_close">Close</button></div>
   </div>
 </div>
 

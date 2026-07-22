@@ -282,6 +282,26 @@ function cloudPushAll() {
   CLOUD_KEYS.forEach(function (k) { CLOUD._pending[k] = true; });
   return cloudFlush();
 }
+// Recovery from the login screen: prove ownership with the cloud password,
+// then pull back ONLY the staff account list. Deliberately not the whole
+// dataset — recovery must not become a way to siphon a shop's sales, and it
+// must not overwrite takings this device has that the cloud hasn't seen.
+function cloudRecoverAccounts(email, password) {
+  if (!CLOUD.cfg || !CLOUD.cfg.apiKey) {
+    return Promise.reject(new Error("Cloud is not configured"));
+  }
+  return _cloudAuth("signInWithPassword", email, password).then(function (j) {
+    CLOUD.email = email;
+    _applySession(j);
+    return _getKey("pos_acc", CLOUD.idToken);
+  }).then(function (remote) {
+    if (!remote || !remote.v) return null;
+    localStorage.setItem("pos_acc", remote.v);
+    localStorage.setItem("pos_ts_pos_acc", String(remote.ts || Date.now()));
+    try { return JSON.parse(remote.v); } catch (e) { return null; }
+  });
+}
+
 // Restore the session on boot, then quietly pull.
 function cloudBoot() {
   cloudLoad();

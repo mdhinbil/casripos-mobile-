@@ -837,6 +837,91 @@ function doCloudSignOut(){
 }
 
 // ============================================================
+//  ACCOUNT RECOVERY — reachable from the login screen.
+//  There was no way back in at all: forget the password and the till was dead,
+//  with the shop's own products and sales locked inside it. Cloud sync made it
+//  sharper, because signing in on a second device replaces that device's staff
+//  logins with the first device's.
+//
+//  Two of the three routes require proof of ownership (the cloud password, or
+//  a backup file), and both restore ONLY the account list — never sales — so
+//  neither can be used to quietly lift a shop's takings. The third resets the
+//  admin password and is deliberately last, loud, and non-destructive to data.
+// ============================================================
+function openRecover(){
+  [["rc_t",T("Can't sign in?","Ma geli kartid?")],
+   ["rc_s",T("Pick whichever you have.","Dooro midka aad haysato.")],
+   ["rc_1h",T("1. Restore your staff logins from cloud sync","1. Ka soo celi cloud-ka isticmaalayaasha")],
+   ["rc_1d",T("If this shop uses cloud sync, sign in with that email and password.","Haddii dukaankan cloud isticmaalo, gali email-ka iyo furaha.")],
+   ["rc_1b",T("Restore logins","Soo celi isticmaalayaasha")],
+   ["rc_2h",T("2. Restore from a backup file","2. Ka soo celi fayl kayd ah")],
+   ["rc_2d",T("Pick a backup you exported earlier. Only the staff logins are restored.","Dooro kayd aad hore u samaysay. Kaliya isticmaalayaasha ayaa soo noqonaya.")],
+   ["rc_3h",T("3. Last resort — reset the admin password","3. Ugu dambeyn — dib u deji furaha admin-ka")],
+   ["rc_3d",T("Use only if you have neither of the above. Your products and sales are kept.","Isticmaal haddii aadan labadaas midna haysan. Alaabta iyo iibku way sii jiraan.")],
+   ["rc_3b",T("Reset admin password","Dib u deji furaha admin")],
+   ["rc_close",T("Close","Xir")]
+  ].forEach(function(p){var e=$(p[0]);if(e)e.textContent=p[1];});
+  var f=$("rc_file");if(f)f.value="";
+  openM("M_recover");
+}
+// Tell the user which usernames now exist, so they know what to type.
+function _recoverDone(list){
+  var names=(list||[]).filter(function(a){return a&&a.active!==false;})
+                      .map(function(a){return a.username;}).slice(0,8);
+  closeM("M_recover");
+  igAlert(T("Staff logins restored.\n\nYou can sign in with:\n","Isticmaalayaashii waa la soo celiyay.\n\nWaxaad ku geli kartaa:\n")+
+          "  "+names.join("\n  ")+
+          T("\n\nUse the password for that account.","\n\nIsticmaal furaha akoonkaas."),
+          function(){location.reload();});
+}
+function recoverFromCloud(){
+  var em=($("rc_em")&&$("rc_em").value||"").trim();
+  var pw=($("rc_pw")&&$("rc_pw").value||"");
+  if(!em||!pw){toast(T("Enter the sync email and password","Geli email-ka iyo furaha cloud-ka"));return;}
+  if(typeof cloudRecoverAccounts!=="function"){toast(T("Cloud sync unavailable","Cloud lama heli karo"));return;}
+  toast(T("Checking…","Waa la hubinayaa…"));
+  cloudRecoverAccounts(em,pw).then(function(list){
+    if(!list||!list.length){toast(T("No staff logins found in the cloud","Cloud-ka lagama helin isticmaalayaal"));return;}
+    _recoverDone(list);
+  }).catch(function(e){
+    toast(_cloudErrText(e.message));
+  });
+}
+function recoverFromBackup(input){
+  var file=input&&input.files&&input.files[0];if(!file)return;
+  var r=new FileReader();
+  r.onload=function(){
+    var obj;
+    try{obj=JSON.parse(r.result);}catch(e){toast(T("That file isn't a valid backup","Faylkaasi ma aha kayd sax ah"));return;}
+    if(!obj||obj.app!=="CasriPOS"||!obj.data||!obj.data.pos_acc){
+      toast(T("No staff logins in that file","Faylkaas isticmaalayaal ma laha"));return;
+    }
+    try{
+      localStorage.setItem("pos_acc",obj.data.pos_acc);
+      _recoverDone(JSON.parse(obj.data.pos_acc));
+    }catch(e){toast(T("Could not restore","Lama soo celin karin"));}
+  };
+  r.readAsText(file);
+}
+async function recoverResetAdmin(){
+  if(!await igAsk(
+      T("Reset the admin password on this device?\n\nProducts, sales and invoices are NOT deleted. Anyone holding this phone can do this, so change the password afterwards.",
+        "Dib u deji furaha admin-ka qalabkan?\n\nAlaabta, iibka iyo qaansheegyada MA tirtiraysid. Qof kasta oo taleefankan haysta wuu samayn karaa, markaa beddel furaha ka dib."),
+      T("Reset","Dib u deji")))return;
+  var pass="casri"+Math.floor(1000+Math.random()*9000);
+  var list=[];
+  try{list=JSON.parse(localStorage.getItem("pos_acc")||"[]");}catch(e){}
+  var adm=list.find(function(a){return a&&a.username&&a.username.toLowerCase()==="admin";});
+  if(adm){adm.password=pass;adm.active=true;adm.role="admin";}
+  else{list.unshift({id:"a"+Date.now(),name:"Admin",username:"admin",password:pass,role:"admin",bizId:"",active:true});}
+  try{localStorage.setItem("pos_acc",JSON.stringify(list));}catch(e){toast(T("Could not save","Lama keydin karin"));return;}
+  closeM("M_recover");
+  igAlert(T("Sign in with:\n\n  Username: admin\n  Password: ","Ku gal:\n\n  Isticmaale: admin\n  Furaha: ")+pass+
+          T("\n\nWrite this down, then change it in Users.","\n\nQor, kadibna ka beddel Isticmaalayaasha."),
+          function(){location.reload();});
+}
+
+// ============================================================
 //  BACKUP / RESTORE
 //  Casri POS keeps everything in this device's localStorage — there is no
 //  server. So a lost or wiped phone means every sale and product is gone, and
