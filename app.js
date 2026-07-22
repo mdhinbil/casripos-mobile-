@@ -455,7 +455,7 @@ var CAT_SO={
   "Electronics":"Elektaroonikada",
   // shop / grocery
   "Bakery":"Rootiga",
-  "Drinks":"Cabitaanka",
+  "Drinks":"Cabitaannada",
   "Grocery":"Raashinka",
   "Household":"Guriga",
   "Produce":"Khudaarta",
@@ -464,7 +464,7 @@ var CAT_SO={
   "Salads":"Salad",
   "Sides":"Dheeraadka",
   "Desserts":"Macmacaanka",
-  "Coffee":"Qaxwaha",
+  "Coffee":"Qaxwada",
   "Pastries":"Doolshaha",
   "Breakfast":"Quraacda",
   "Juices":"Casiirka",
@@ -567,7 +567,7 @@ function _renderCartSummary(){
 // cash (with change owed), card, or mobile money (ZAAD / EVC Plus / eDahab).
 var PAY_METHOD="cash";
 function payLabel(m){
-  return m==="card"?T("Card","Risiidh")
+  return m==="card"?T("Card","Kaadh")
        : m==="mobile"?T("Mobile money","Lacag mobile")
        : T("Cash","Cadaan");
 }
@@ -608,7 +608,7 @@ function openPayModal(){
   var amt=$("pay_amt");if(amt)amt.textContent=money(t.tot);
   var ttl=$("pay_t");if(ttl)ttl.textContent=T("Payment","Lacag bixinta");
   // bilingual labels
-  var m={payM_cash:[T("Cash","Cadaan"),0],payM_card:[T("Card","Risiidh"),0],payM_mobile:[T("Mobile","Mobile"),0]};
+  var m={payM_cash:[T("Cash","Cadaan"),0],payM_card:[T("Card","Kaadh"),0],payM_mobile:[T("Mobile","Mobile"),0]};
   Object.keys(m).forEach(function(k){var e=$(k);if(e)e.textContent=m[k][0];});
   var rl=$("pay_recv_l");if(rl)rl.textContent=T("Amount received","Lacagta la helay");
   var cl=$("pay_change_l");if(cl)cl.textContent=T("Change","Baaqiga");
