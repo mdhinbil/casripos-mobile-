@@ -402,7 +402,8 @@ PAGES.pos=function(){
   }
   cats.forEach(function(c){
     var on=CAT_FILTER===c?" on":"";
-    h+="<button class=\"catChip"+on+"\" onclick=\"CAT_FILTER='"+esc(c)+"';renderPage('pos')\">"+(c==="all"?T("All","Dhamaan"):esc(c))+"</button>";
+    // value stays the stored English name so filtering still matches; only the label translates
+    h+="<button class=\"catChip"+on+"\" onclick=\"CAT_FILTER='"+esc(c)+"';renderPage('pos')\">"+(c==="all"?T("All","Dhamaan"):esc(catLabel(c)))+"</button>";
   });
   h+="</div>";
   h+="<div class=\"prodGrid\" id=\"prodGrid\">"+_renderProductCards()+"</div>";
@@ -441,6 +442,41 @@ function _scanBarcode(input){
   toast(p.name+" +1");            // confirm the scan actually landed
   input.value="";input.focus();   // ready for the next scan
 }
+// Category names are DATA (stored on each product), not UI labels — so they are
+// translated only when shown. The stored value stays English, which keeps
+// filtering, search and existing products working, and any category a shop
+// types itself is left exactly as typed.
+var CAT_SO={
+  // reviewed
+  "Stationery":"Qalabka xafiisyada",
+  "Footwear":"Kabaha",
+  "Apparel":"Dharka",
+  "Accessories":"Qalabka",
+  "Electronics":"Elektaroonikada",
+  // shop / grocery
+  "Bakery":"Rootiga",
+  "Drinks":"Cabitaanka",
+  "Grocery":"Raashinka",
+  "Household":"Guriga",
+  "Produce":"Khudaarta",
+  // restaurant / cafe
+  "Mains":"Cuntada",
+  "Salads":"Salad",
+  "Sides":"Dheeraadka",
+  "Desserts":"Macmacaanka",
+  "Coffee":"Qaxwaha",
+  "Pastries":"Doolshaha",
+  "Breakfast":"Quraacda",
+  "Juices":"Casiirka",
+  "Smoothies":"Smoothie",
+  "Snacks":"Cunto fudud",
+  "Soft":"Cabitaan qabow"
+};
+function catLabel(c){
+  c=(c||"")+"";
+  if(LANG!=="so")return c;
+  return CAT_SO[c]||c;
+}
 function _uniqueCats(){var s={};forBiz(PRODUCTS).forEach(function(p){if(p.cat)s[p.cat]=1;});return Object.keys(s).sort();}
 function _filterProducts(){
   $("prodGrid").innerHTML=_renderProductCards();
@@ -463,7 +499,7 @@ function _renderProductCards(){
     var stkCls=p.stock<=5?" low":"";
     return "<div class=\"prodC"+out+"\" onclick=\""+(p.stock>0?"addToCart('"+p.id+"')":"toast('"+T("Out of stock","Kaydka ma jiro")+"')")+"\">"+
       "<div class=\"pIc\">"+(p.icon||"&#128230;")+"</div>"+
-      "<div class=\"pCt\">"+esc(p.cat||"")+"</div>"+
+      "<div class=\"pCt\">"+esc(catLabel(p.cat||""))+"</div>"+
       "<div class=\"pNm\">"+esc(p.name)+"</div>"+
       "<div class=\"pPr\">"+money(p.price)+"</div>"+
       "<div class=\"pStk"+stkCls+"\">"+T("Stock: ","Kayd: ")+p.stock+"</div>"+
@@ -1355,7 +1391,7 @@ PAGES.products=function(){
       h+="<td>"+(p.barcode?"<div style=\"font-family:ui-monospace,monospace;font-size:11.5px;color:#0a1628\">"+esc(p.barcode)+"</div>":"")+
          (p.sku?"<div style=\"font-size:10px;color:#5c6b82\">"+esc(p.sku)+"</div>":"")+
          (!p.barcode&&!p.sku?"<span style=\"color:#98a2b3\">—</span>":"")+"</td>";
-      h+="<td><span class=\"bdg bgr\">"+esc(p.cat||"-")+"</span></td>";
+      h+="<td><span class=\"bdg bgr\">"+esc(p.cat?catLabel(p.cat):"-")+"</span></td>";
       h+="<td><strong>"+money(p.price)+"</strong></td>";
       h+="<td><span class=\"bdg "+stkBdg+"\">"+p.stock+"</span></td>";
       h+="<td style=\"text-align:right;white-space:nowrap\">";

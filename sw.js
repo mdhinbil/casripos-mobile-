@@ -1,5 +1,5 @@
 // Casri POS service worker — offline-first cache
-const CACHE = 'casripos-v24';
+const CACHE = 'casripos-v25';
 const ASSETS = [
   './',
   './index.html',
