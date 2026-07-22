@@ -556,7 +556,7 @@ function _renderCartSummary(){
   var t=_cartTotals();
   var h="<div class=\"posSum\">";
   h+="<div class=\"sumRow\"><span>"+T("Items","Alaabta")+"</span><span>"+t.items+"</span></div>";
-  h+="<div class=\"sumRow\"><span>"+T("Subtotal","Wadarta")+"</span><span>"+money(t.sub)+"</span></div>";
+  h+="<div class=\"sumRow\"><span>"+T("Subtotal","Isugeynta")+"</span><span>"+money(t.sub)+"</span></div>";
   if(BIZ.tax>0)h+="<div class=\"sumRow\"><span>"+T("Tax","Canshuur")+" ("+BIZ.tax+"%)</span><span>"+money(t.tax)+"</span></div>";
   h+="<div class=\"sumRow tot\"><span>"+T("Total","Wadarta guud")+"</span><span>"+money(t.tot)+"</span></div>";
   h+="</div>";
@@ -737,7 +737,7 @@ function _receiptText(sale){
     h+=line("  "+it.qty+" x "+money(it.price),money(it.price*it.qty))+"\n";
   });
   h+="-".repeat(w)+"\n";
-  h+=line(T("Subtotal","Wadarta"),money(sale.subtotal))+"\n";
+  h+=line(T("Subtotal","Isugeynta"),money(sale.subtotal))+"\n";
   if(sale.tax>0)h+=line(T("Tax","Canshuurta"),money(sale.tax))+"\n";
   h+="=".repeat(w)+"\n";
   h+=line(T("TOTAL","WADARTA"),money(sale.total))+"\n";
@@ -1279,7 +1279,7 @@ function _invoiceHTML(inv){
   });
   h+="</tbody></table>";
 
-  h+="<div class=\"invSum\"><table><tr><td>"+T("Subtotal","Wadarta")+"</td><td>"+money(s.subtotal)+"</td></tr>";
+  h+="<div class=\"invSum\"><table><tr><td>"+T("Subtotal","Isugeynta")+"</td><td>"+money(s.subtotal)+"</td></tr>";
   if(s.tax>0)h+="<tr><td>"+T("Tax","Canshuurta")+"</td><td>"+money(s.tax)+"</td></tr>";
   h+="<tr class=\"tot\"><td>"+T("TOTAL","WADARTA")+"</td><td>"+money(s.total)+"</td></tr></table></div>";
   h+="<div style=\"text-align:right\"><span class=\"invPaid\">&#10003; "+T("Paid","La bixiyay")+"</span></div>";
@@ -1317,7 +1317,7 @@ function shareInvoiceWA(){
   L.push("");
   (s.items||[]).forEach(function(it){L.push(it.name+"  "+it.qty+" x "+money(it.price)+"  = "+money(it.price*it.qty));});
   L.push("");
-  if(s.tax>0)L.push(T("Subtotal","Wadarta")+": "+money(s.subtotal));
+  if(s.tax>0)L.push(T("Subtotal","Isugeynta")+": "+money(s.subtotal));
   if(s.tax>0)L.push(T("Tax","Canshuurta")+": "+money(s.tax));
   L.push("*"+T("TOTAL","WADARTA")+": "+money(s.total)+"*");
   var url="https://wa.me/"+(inv.phone||"").replace(/[^0-9]/g,"")+"?text="+encodeURIComponent(L.join("\n"));
