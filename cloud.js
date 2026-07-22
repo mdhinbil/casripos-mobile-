@@ -224,7 +224,41 @@ function cloudPull(force) {
   });
 }
 
+// What is already in the cloud for this account? Used at sign-in to decide
+// direction. NEVER infer this from timestamps: a freshly installed phone has
+// NEWER stamps than a PC that uploaded yesterday, so a timestamp-based guess
+// would push the empty phone over the real data and destroy it.
+function cloudRemoteInfo() {
+  return _cloudFreshToken().then(function (token) {
+    return Promise.all(CLOUD_KEYS.map(function (k) {
+      return _getKey(k, token).then(function (r) { return { k: k, r: r }; });
+    }));
+  }).then(function (rows) {
+    var info = { has: false, businesses: 0, products: 0, sales: 0 };
+    rows.forEach(function (row) {
+      if (!row.r || !row.r.v) return;
+      var n = 0;
+      try { var a = JSON.parse(row.r.v); n = Array.isArray(a) ? a.length : 0; } catch (e) {}
+      if (row.k === "pos_biz_list") info.businesses = n;
+      if (row.k === "pos_prod")     info.products = n;
+      if (row.k === "pos_sales")    info.sales = n;
+      if (n > 0) info.has = true;
+    });
+    return info;
+  });
+}
+// Local counts, for the same comparison.
+function cloudLocalInfo() {
+  function n(k) {
+    try { var a = JSON.parse(localStorage.getItem(k) || "[]"); return Array.isArray(a) ? a.length : 0; }
+    catch (e) { return 0; }
+  }
+  return { businesses: n("pos_biz_list"), products: n("pos_prod"), sales: n("pos_sales") };
+}
+
 // ── public actions (wired to Settings) ──────────────────────
+// Signs in only. The CALLER decides which way data should move, after showing
+// the user what is on each side.
 function cloudSignIn(email, password, isNew) {
   if (!CLOUD.cfg || !CLOUD.cfg.apiKey) {
     return Promise.reject(new Error(T("Cloud is not configured", "Cloud lama habayn")));
@@ -233,7 +267,7 @@ function cloudSignIn(email, password, isNew) {
     .then(function (j) {
       CLOUD.email = email;
       _applySession(j);
-      return cloudPull(false);
+      return cloudRemoteInfo();
     });
 }
 function cloudSignOut() {

@@ -776,16 +776,36 @@ function doCloudSignIn(isNew){
   var pw=($("cl_pw")&&$("cl_pw").value||"");
   if(!em||!pw){toast(T("Enter email and password","Geli email iyo sirta"));return;}
   _cloudPaint("sync");
-  cloudSignIn(em,pw,isNew).then(function(applied){
+  cloudSignIn(em,pw,isNew).then(async function(remote){
     toast(isNew?T("Sync account created","Akoon cloud la sameeyay"):T("Signed in to sync","Cloud waad gashay"));
-    if(applied>0){
-      igAlert(T("Your cloud data has been downloaded to this device. The app will reload.",
-                "Xogtaadii cloud-ka ayaa qalabkan lagu soo dejiyay. Barnaamijku wuu dib u furmi doonaa."),
-              function(){location.reload();});
+    var local=cloudLocalInfo();
+    // Nothing in the cloud yet → this device seeds it. Safe: nothing to lose.
+    if(!remote.has){
+      await cloudPushAll();_cloudRefresh();
+      toast(T("This device is now your cloud copy","Qalabkan hadda waa nuqulkaaga cloud-ka"));
+      return;
+    }
+    // Cloud HAS data. Never guess the direction from timestamps — a fresh phone
+    // has newer stamps than a PC that uploaded yesterday, and guessing would
+    // push the empty phone over the real data. Ask, and show both sides.
+    function sum(o){return o.businesses+" "+T("businesses","ganacsi")+", "+o.products+" "+T("products","alaab")+", "+o.sales+" "+T("sales","iib");}
+    var pick=await igAskChoice(
+      T("Which copy is correct?","Nuqulkee saxa ah?"),
+      T("In the cloud","Cloud-ka ku jira")+":  "+sum(remote)+"\n"+
+      T("On this device","Qalabkan ku jira")+":  "+sum(local)+"\n\n"+
+      T("The other copy will be replaced.","Nuqulka kale waa la beddeli doonaa."),
+      [{v:"down",t:"⬇ "+T("Use the cloud copy (download)","Isticmaal kan cloud-ka (soo deji)")},
+       {v:"up",  t:"⬆ "+T("Use this device (upload)","Isticmaal qalabkan (soo dir)")}],
+      "down");
+    if(pick===null){_cloudRefresh();return;}
+    if(pick==="up"){
+      await cloudPushAll();_cloudRefresh();
+      toast(T("Uploaded to cloud","Cloud-ka waa loo diray"));
     } else {
-      // Nothing in the cloud yet → this device becomes the starting point.
-      cloudPushAll().then(function(){_cloudRefresh();});
-      _cloudRefresh();
+      await cloudPull(true);            // force: ignore timestamps, take the cloud
+      igAlert(T("Cloud data downloaded. The app will reload.",
+                "Xogta cloud-ka waa la soo dejiyay. Barnaamijku wuu dib u furmi doonaa."),
+              function(){location.reload();});
     }
   }).catch(function(e){
     CLOUD.lastError=_cloudErrText(e.message);
