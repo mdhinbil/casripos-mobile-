@@ -50,6 +50,17 @@ jobs:
 
       # Regenerate icon.png / presplash.png so the build never depends on the
       # committed binaries being present or up to date.
+      # Give every build a higher versionCode than the last, so Android treats
+      # it as a real update instead of silently keeping the installed copy.
+      - name: Stamp version
+        run: |
+          sed -i "s/^android.numeric_version = .*/android.numeric_version = ${{ github.run_number }}/" buildozer.spec
+          sed -i "s/^version         = .*/version         = 1.0.${{ github.run_number }}/" buildozer.spec
+          grep -E "^version|^android.numeric_version" buildozer.spec
+          # keep the on-screen build marker in step with the release number
+          sed -i "s/var APP_BUILD=\"[^\"]*\"/var APP_BUILD=\"build ${{ github.run_number }}\"/" app.js
+          grep -o "var APP_BUILD=\"[^\"]*\"" app.js
+
       - name: Generate launcher assets
         run: python generate_assets.py
 

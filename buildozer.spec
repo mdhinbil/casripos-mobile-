@@ -20,6 +20,11 @@ source.exclude_dirs = bin,.buildozer,.git,__pycache__
 source.exclude_patterns = */*.zip,*.md
 
 version         = 1.0.0
+# Android decides whether an APK is an UPDATE by versionCode, not by this
+# string. It sat at the default for every build, so each new APK looked like
+# the version already installed and the phone quietly kept the old one — new
+# fixes appeared to do nothing. CI overwrites this with the run number.
+android.numeric_version = 1
 
 requirements = python3,kivy==2.3.0,android
 

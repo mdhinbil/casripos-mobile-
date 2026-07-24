@@ -1993,3 +1993,8 @@ async function _wipeSales(){if(!await igAsk(T("Delete ALL sales in "+BIZ.name+"?
   $("loginPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
   $("loginUser").addEventListener("keydown",function(e){if(e.key==="Enter")$("loginPass").focus();});
 })();
+
+// Show which build is installed, so "the update did nothing" can be checked at
+// a glance instead of guessed at.
+var APP_BUILD="v27";
+(function(){try{var e=document.getElementById("lp_ver");if(e)e.textContent=APP_BUILD;}catch(e){}})();
