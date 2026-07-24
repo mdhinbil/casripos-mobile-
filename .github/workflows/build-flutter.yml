@@ -46,6 +46,18 @@ jobs:
           # that references a class this project does not have.
           git checkout -- test/ 2>/dev/null || true
 
+      # The plugins (file_picker, share_plus…) require compileSdk 36, but
+      # flutter create writes 34. Raising it in the generated Gradle file keeps
+      # us off hand-maintained build files while still satisfying the plugins.
+      # compileSdk only says which APIs may be compiled against; minSdk and
+      # targetSdk are untouched, so device support does not change.
+      - name: Raise compileSdk for plugins
+        working-directory: flutter_app
+        run: |
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts 2>/dev/null || true
+          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 36/' android/app/build.gradle 2>/dev/null || true
+          grep -rn "compileSdk" android/app/build.gradle* || true
+
       - name: Get packages
         working-directory: flutter_app
         run: flutter pub get
