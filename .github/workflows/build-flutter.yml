@@ -1,0 +1,89 @@
+name: Build Casri POS (Flutter)
+
+# The native rewrite. Runs alongside the existing WebView build, which stays
+# the shipping app until this one is proven.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/build-flutter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      # Only lib/ and pubspec.yaml are committed. The android/ project is
+      # generated here so there are no hand-written Gradle files to drift out
+      # of sync with the Flutter version.
+      - name: Generate Android project
+        working-directory: flutter_app
+        run: |
+          flutter create --platforms=android \
+            --org com.casri --project-name casripos .
+
+      - name: Get packages
+        working-directory: flutter_app
+        run: flutter pub get
+
+      # Catches real mistakes (bad types, missing imports) with a clear message,
+      # rather than letting them surface as a confusing Gradle failure.
+      - name: Analyze
+        working-directory: flutter_app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build debug APK
+        working-directory: flutter_app
+        run: flutter build apk --debug
+
+      - name: Rename artifact
+        working-directory: flutter_app
+        run: |
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-debug.apk out/CasriPOS-native-debug.apk
+          ls -lh out/
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: casripos-native-apk
+          path: flutter_app/out/CasriPOS-native-debug.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish to GitHub Releases
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: native-v${{ github.run_number }}
+          name: Casri POS NATIVE build ${{ github.run_number }}
+          body: |
+            Native Flutter build (preview — the WebView app is still the shipping one).
+
+            Installs alongside the current app, so you can compare them.
+            To move your data across: export a backup from the old app,
+            then Settings > Import backup here.
+          files: flutter_app/out/CasriPOS-native-debug.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: false
