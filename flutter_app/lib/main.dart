@@ -41,7 +41,9 @@ class CasriApp extends StatelessWidget {
           titleTextStyle: TextStyle(
             fontSize: 19, fontWeight: FontWeight.w800, color: kNavy),
         ),
-        cardTheme: CardTheme(
+        // CardThemeData, not CardTheme — the theme slot takes the data class
+        // on current Flutter.
+        cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
           shape: RoundedRectangleBorder(

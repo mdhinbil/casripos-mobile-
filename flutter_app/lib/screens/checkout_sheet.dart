@@ -152,11 +152,17 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                         spacing: 8, runSpacing: 8,
                         children: [
                           _Quick('Exact', () => _quick(dueDisplay)),
-                          for (final step in [1, 5, 10, 20, 50, 100])
+                          // Round-ups a cashier is actually handed: next 1, 5,
+                          // 10… above the amount due. Doubles throughout —
+                          // ceil() returns an int and _quick wants a double.
+                          for (final step in <double>[1, 5, 10, 20, 50, 100])
                             if ((dueDisplay / step).ceil() * step > dueDisplay)
                               _Quick(
-                                ((dueDisplay / step).ceil() * step).round().toString(),
-                                () => _quick((dueDisplay / step).ceil() * step)),
+                                ((dueDisplay / step).ceil() * step)
+                                    .round()
+                                    .toString(),
+                                () => _quick(
+                                    (dueDisplay / step).ceil() * step)),
                         ].take(5).toList(),
                       ),
                       const SizedBox(height: 12),

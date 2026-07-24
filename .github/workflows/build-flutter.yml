@@ -42,6 +42,9 @@ jobs:
         run: |
           flutter create --platforms=android \
             --org com.casri --project-name casripos .
+          # flutter create rewrites test/widget_test.dart with a placeholder
+          # that references a class this project does not have.
+          git checkout -- test/ 2>/dev/null || true
 
       - name: Get packages
         working-directory: flutter_app
