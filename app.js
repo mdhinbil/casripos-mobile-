@@ -219,6 +219,110 @@ function openSidebar(){$("sidebar").classList.add("open");$("sbOverlay").classLi
 function closeSidebar(){$("sidebar").classList.remove("open");$("sbOverlay").classList.remove("open");}
 
 // ── LOGIN ────────────────────────────────────────────────────
+// ── Login panels: welcome → workspace → password (+ create, staff) ──
+var LP_PANELS=["welcome","demo","pin","workspace","pwd","create","staff"];
+function showPanel(name){
+  LP_PANELS.forEach(function(p){
+    var el=$("lp_"+p);if(el)el.style.display=(p===name)?"block":"none";
+  });
+  ["ws_err","pwd_err","cw_err","loginErr"].forEach(function(id){var e=$(id);if(e)e.style.display="none";});
+  var focusId={workspace:"ws_email",pwd:"ws_pwd",create:"cw_biz",staff:"loginUser"}[name];
+  if(focusId)setTimeout(function(){var e=$(focusId);if(e)e.focus();},60);
+}
+function showWelcome(){showPanel("welcome");}
+function _lpErr(id,msg){var e=$(id);if(e){if(msg)e.textContent=msg;e.style.display="block";}}
+
+// Step 2 → 3: got the workspace email, ask for the password.
+function wsContinue(){
+  var em=($("ws_email")&&$("ws_email").value||"").trim();
+  if(!em||em.indexOf("@")<0){_lpErr("ws_err",T("Enter a valid email","Geli email sax ah"));return;}
+  var pe=$("pwd_email");if(pe)pe.textContent=em;
+  showPanel("pwd");
+}
+// Step 3: sign in to the cloud workspace, pull its data, then open the till as
+// its admin. Needs internet — this is the "join on another device" path.
+function wsSignIn(){
+  var em=($("ws_email")&&$("ws_email").value||"").trim();
+  var pw=($("ws_pwd")&&$("ws_pwd").value||"");
+  if(!pw){_lpErr("pwd_err",T("Enter your password","Geli furahaaga"));return;}
+  if(typeof cloudSignIn!=="function"){_lpErr("pwd_err",T("Cloud unavailable — use staff sign-in","Cloud lama heli karo"));return;}
+  var btn=(typeof event!=="undefined"&&event)?event.target:null;if(btn)btn.disabled=true;
+  cloudSignIn(em,pw,false).then(function(){
+    if(!recoveryEmail())setRecoveryEmail(em);
+    return (typeof cloudPull==="function")?cloudPull(true):null;   // take the cloud copy
+  }).then(function(){
+    _enterAsAdmin();
+    toast(T("Signed in to workspace","Waad gashay workspace-ka"));
+  }).catch(function(e){
+    if(btn)btn.disabled=false;
+    _lpErr("pwd_err",(typeof _cloudErrText==="function")?_cloudErrText(e.message):String(e.message));
+  });
+}
+// Step 4: create a brand-new workspace = a cloud account + first business.
+function wsCreate(){
+  var nm=($("cw_biz")&&$("cw_biz").value||"").trim();
+  var em=($("cw_email")&&$("cw_email").value||"").trim();
+  var pw=($("cw_pwd")&&$("cw_pwd").value||"");
+  if(!nm||em.indexOf("@")<0||pw.length<6){_lpErr("cw_err",T("Fill all fields (password 6+)","Buuxi dhammaan (fur 6+)"));return;}
+  if(typeof cloudSignIn!=="function"){_lpErr("cw_err",T("Cloud unavailable","Cloud lama heli karo"));return;}
+  var btn=(typeof event!=="undefined"&&event)?event.target:null;if(btn)btn.disabled=true;
+  // Name the current default business, so the new workspace starts with theirs.
+  var b=BIZ_LIST&&BIZ_LIST[0];if(b){b.name=nm;_save("pos_biz_list",BIZ_LIST);}
+  cloudSignIn(em,pw,true).then(function(){        // signUp
+    setRecoveryEmail(em);
+    return (typeof cloudPushAll==="function")?cloudPushAll():null;   // seed the cloud from this device
+  }).then(function(){
+    _enterAsAdmin();
+    toast(T("Workspace created","Workspace la sameeyay"));
+  }).catch(function(e){
+    if(btn)btn.disabled=false;
+    _lpErr("cw_err",(typeof _cloudErrText==="function")?_cloudErrText(e.message):String(e.message));
+  });
+}
+// Open the till as the workspace admin after a cloud sign-in.
+function _enterAsAdmin(){
+  var admin=ACCOUNTS.find(function(a){return a.active&&a.role==="admin"&&!a.bizId;})
+          ||ACCOUNTS.find(function(a){return a.active&&a.role==="admin";})
+          ||ACCOUNTS[0];
+  CURRENT_USER=admin||null;
+  $("LP").style.display="none";
+  $("AP").classList.add("open");
+  buildNav();renderUser();setLang(LANG);goTo("dashboard");
+}
+// Demo mode: first pick an industry, then open the app as admin with a fitting
+// sample menu. Data still saves locally like any till.
+var DEMO_IND="cafe";
+function startDemo(){showPanel("demo");}
+function pickInd(kind,btn){
+  DEMO_IND=kind;
+  var box=$("lp_inds");
+  if(box){var bs=box.querySelectorAll(".lp-ind");for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i]===btn);}
+}
+// Industry chosen → go to the PIN screen.
+function demoContinue(){showPanel("pin");_pinSet("");}
+// PIN keypad. For demo, any PIN works — it just feels like a real till login.
+var DEMO_PIN="";
+function _pinSet(v){DEMO_PIN=String(v).slice(0,6);var d=$("pin_dots");if(d){var n=DEMO_PIN.length;var s="";for(var i=0;i<6;i++)s+="<span class=\"pd"+(i<n?" on":"")+"\"></span>";d.innerHTML=s;}}
+function pinTap(n){_pinSet(DEMO_PIN+n);}
+function pinDel(){_pinSet(DEMO_PIN.slice(0,-1));}
+function demoEnter(){
+  if(!DEMO_PIN){toast(T("Enter any PIN","Geli PIN kasta"));return;}
+  var demo=ACCOUNTS.find(function(a){return a.active&&a.username.toLowerCase()==="admin";})||ACCOUNTS[0];
+  if(!demo){toast(T("Demo unavailable","Demo lama heli karo"));return;}
+  CURRENT_USER=demo;
+  if(demo.bizId&&BIZ_LIST.find(function(b){return b.id===demo.bizId;})){
+    CURRENT_BIZ_ID=demo.bizId;_save("pos_current_biz",CURRENT_BIZ_ID);
+  }
+  // Set the demo business to the chosen industry and give it that menu.
+  var b=BIZ_LIST.find(function(x){return x.id===CURRENT_BIZ_ID;});
+  if(b){b.type=DEMO_IND;_save("pos_biz_list",BIZ_LIST);}
+  CURRENCY=(b&&b.currency)||"USD";
+  if(typeof _seedSamples==="function")_seedSamples(DEMO_IND,true);
+  $("LP").style.display="none";
+  $("AP").classList.add("open");
+  buildNav();renderUser();setLang(LANG);goTo("pos");
+  toast(T("Demo — sign out to exit","Demo — ka bax si aad uga baxdo"));
+}
 function doLogin(){
   var u=$("loginUser").value.trim(),p=$("loginPass").value;
   var acc=ACCOUNTS.find(function(a){return a.active&&a.username.toLowerCase()===u.toLowerCase()&&a.password===p;});
@@ -248,7 +352,9 @@ async function doLogout(){
   CURRENT_USER=null;CART=[];
   $("AP").classList.remove("open");
   $("LP").style.display="flex";
-  $("loginPass").value="";
+  var lu=$("loginUser");if(lu)lu.value="";
+  var lp=$("loginPass");if(lp)lp.value="";
+  showWelcome();   // back to the landing page, not straight to the form
 }
 
 // ── LANGUAGE TOGGLE ──────────────────────────────────────────
@@ -1894,8 +2000,8 @@ PAGES.settings=function(){
   return h;
 };
 async function _wipeProducts(){if(!await igAsk(T("Delete EVERY product in "+BIZ.name+"? Cannot be undone.","Tirtir DHAMMAAN alaabta "+BIZ.name+"?")))return;PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});_save("pos_prod",PRODUCTS);toast(T("Products cleared","Alaabtii waa la cadeeyey"));renderPage("settings");}
-async function _loadSamples(kind){
-  var menus={
+// Shared sample menus — used by Settings "Load samples" and by demo mode.
+var SAMPLE_MENUS={
     restaurant:[
       {name:"Beef Burger",cat:"Mains",price:8.50,stock:99,icon:"🍔"},
       {name:"Chicken Wrap",cat:"Mains",price:6.75,stock:99,icon:"🌯"},
@@ -1947,15 +2053,23 @@ async function _loadSamples(kind){
       {name:"Phone Charger",cat:"Electronics",price:11.99,stock:55,icon:"🔌",sku:"CH-001",barcode:"1000010"}
     ]
   };
-  var items=menus[kind];if(!items)return;
-  if(!await igAsk(T("Add "+items.length+" sample items to "+BIZ.name+"?","Ku dar "+items.length+" alaab tijaabo ah "+BIZ.name+"?")))return;
+// Add a menu's items to the CURRENT business. silent=true skips the toast/confirm
+// (used by demo). Returns how many were added.
+function _seedSamples(kind,silent){
+  var items=SAMPLE_MENUS[kind];if(!items)return 0;
   var added=0;
   items.forEach(function(it){
     if(forBiz(PRODUCTS).find(function(p){return p.name.toLowerCase()===it.name.toLowerCase();}))return;
     PRODUCTS.push(Object.assign({id:"p"+Date.now()+"-"+(added++),bizId:CURRENT_BIZ_ID},it));
   });
   _save("pos_prod",PRODUCTS);
-  toast(T(added+" items added","Ku dartay "+added));
+  if(!silent)toast(T(added+" items added","Ku dartay "+added));
+  return added;
+}
+async function _loadSamples(kind){
+  var items=SAMPLE_MENUS[kind];if(!items)return;
+  if(!await igAsk(T("Add "+items.length+" sample items to "+BIZ.name+"?","Ku dar "+items.length+" alaab tijaabo ah "+BIZ.name+"?")))return;
+  _seedSamples(kind,false);
   renderPage("settings");
 }
 function saveSettings(){

@@ -17,15 +17,95 @@
   <div class="lp-card">
     <div class="lp-logo">&#128722;</div>
     <div class="lp-title">Casri POS</div>
-    <div class="lp-sub">Point of Sale System</div>
-    <div class="lp-err" id="loginErr">Wrong username or password</div>
-    <div class="lp-row"><span class="ic">&#128100;</span><input type="text" id="loginUser" placeholder="Username" autocomplete="username"></div>
-    <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"></div>
-    <button class="lp-btn" onclick="doLogin()">Sign in</button>
-    <div class="lp-forgot"><a href="javascript:void(0)" onclick="openRecover()" id="lp_forgot">Forgot password?</a></div>
-    <div class="lp-hint">Demo: <code>admin</code> / <code>admin123</code></div>
+
+    <!-- 1) Landing: choose how to enter. Shown first. -->
+    <div id="lp_welcome">
+      <div class="lp-sub">You can try the app in demo mode, or sign in to your Casri POS workspace.</div>
+      <button class="lp-btn" onclick="showPanel('workspace')">Sign in</button>
+      <button class="lp-btn lp-btn-ghost" onclick="startDemo()">Try demo</button>
+    </div>
+
+    <!-- 1b) Demo: pick an industry so the demo opens with a fitting menu. -->
+    <div id="lp_demo" style="display:none">
+      <div class="lp-step">Select industry</div>
+      <div class="lp-inds" id="lp_inds">
+        <button type="button" class="lp-ind" data-ind="bar"        onclick="pickInd('bar',this)"><span>&#127865;</span>Juice / Tea bar</button>
+        <button type="button" class="lp-ind" data-ind="cafe"       onclick="pickInd('cafe',this)"><span>&#9749;</span>Cafe</button>
+        <button type="button" class="lp-ind" data-ind="restaurant" onclick="pickInd('restaurant',this)"><span>&#127869;</span>Restaurant</button>
+        <button type="button" class="lp-ind" data-ind="retail"     onclick="pickInd('retail',this)"><span>&#128230;</span>Retail</button>
+      </div>
+      <button class="lp-btn" onclick="demoContinue()">Continue</button>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('welcome')">&#8592; Back</a></div>
+    </div>
+
+    <!-- 1c) Demo PIN — any PIN works, it just feels like a real till login. -->
+    <div id="lp_pin" style="display:none">
+      <div class="lp-step">Demo</div>
+      <div class="lp-lbl">Use any PIN you like to log in</div>
+      <div class="pinDots" id="pin_dots"></div>
+      <div class="pinPad">
+        <button type="button" onclick="pinTap('1')">1</button>
+        <button type="button" onclick="pinTap('2')">2</button>
+        <button type="button" onclick="pinTap('3')">3</button>
+        <button type="button" onclick="pinTap('4')">4</button>
+        <button type="button" onclick="pinTap('5')">5</button>
+        <button type="button" onclick="pinTap('6')">6</button>
+        <button type="button" onclick="pinTap('7')">7</button>
+        <button type="button" onclick="pinTap('8')">8</button>
+        <button type="button" onclick="pinTap('9')">9</button>
+        <button type="button" class="pinAux" onclick="pinDel()">&#9003;</button>
+        <button type="button" onclick="pinTap('0')">0</button>
+        <button type="button" class="pinOk" onclick="demoEnter()">&#10003;</button>
+      </div>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('demo')">&#8592; Back</a></div>
+    </div>
+
+    <!-- 2) Workspace: enter the cloud email that identifies this shop's workspace. -->
+    <div id="lp_workspace" style="display:none">
+      <div class="lp-step">Sign in</div>
+      <div class="lp-lbl">Enter your workspace email</div>
+      <div class="lp-row"><span class="ic">&#9729;</span><input type="email" id="ws_email" placeholder="owner@myshop.com" autocomplete="username" inputmode="email"></div>
+      <button class="lp-btn" onclick="wsContinue()">Continue</button>
+      <div class="lp-err" id="ws_err">Enter your workspace email</div>
+      <div class="lp-newws">No workspace? <a href="javascript:void(0)" onclick="showPanel('create')">Create a Casri POS workspace</a></div>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('staff')">Staff sign-in (works offline)</a></div>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('welcome')">&#8592; Back</a></div>
+    </div>
+
+    <!-- 3) Password for that workspace. -->
+    <div id="lp_pwd" style="display:none">
+      <div class="lp-step">Sign in</div>
+      <div class="lp-lbl">Workspace <b id="pwd_email">—</b></div>
+      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="ws_pwd" placeholder="Password" autocomplete="current-password"></div>
+      <button class="lp-btn" onclick="wsSignIn()">Sign in</button>
+      <div class="lp-err" id="pwd_err">Wrong password</div>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('workspace')">&#8592; Use a different workspace</a></div>
+    </div>
+
+    <!-- 4) Create a new workspace (cloud account + first business). -->
+    <div id="lp_create" style="display:none">
+      <div class="lp-step">Create workspace</div>
+      <div class="lp-row"><span class="ic">&#127970;</span><input type="text" id="cw_biz" placeholder="Business name"></div>
+      <div class="lp-row"><span class="ic">&#9729;</span><input type="email" id="cw_email" placeholder="Workspace email" inputmode="email"></div>
+      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="cw_pwd" placeholder="Password (min 6)"></div>
+      <button class="lp-btn" onclick="wsCreate()">Create workspace</button>
+      <div class="lp-err" id="cw_err">Fill in all fields</div>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('workspace')">&#8592; Back</a></div>
+    </div>
+
+    <!-- 5) Staff/local sign-in — no internet needed, for cashiers. -->
+    <div id="lp_staff" style="display:none">
+      <div class="lp-step">Staff sign-in</div>
+      <div class="lp-err" id="loginErr">Wrong username or password</div>
+      <div class="lp-row"><span class="ic">&#128100;</span><input type="text" id="loginUser" placeholder="Username" autocomplete="username"></div>
+      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"></div>
+      <button class="lp-btn" onclick="doLogin()">Sign in</button>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="openRecover()" id="lp_forgot">Forgot password?</a></div>
+      <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('workspace')">&#8592; Back</a></div>
+    </div>
+
     <!-- Visible build marker: makes it obvious whether an update actually installed. -->
-    <div class="lp-hint" style="margin-top:6px;padding-top:0;border:none"><span id="lp_ver">v—</span></div>
+    <div class="lp-hint" style="margin-top:14px;padding-top:12px;border-top:1px solid #eee"><span id="lp_ver">v—</span></div>
   </div>
 </div>
 

@@ -13,7 +13,10 @@ a{color:#1a6ef5;text-decoration:none}
 .lp-row input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;transition:border .15s}
 .lp-row input:focus{border-color:#1a6ef5}
 .lp-row .ic{position:absolute;left:12px;top:11px;color:#999;font-size:14px}
-.lp-btn{width:100%;padding:11px;border-radius:8px;border:none;background:#1a6ef5;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;transition:background .15s}
+.lp-btn{width:100%;padding:13px;border-radius:10px;border:none;background:#1a6ef5;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:9px;transition:all .15s}
+/* Secondary "Try demo" button — outlined so Sign in stays the primary action */
+.lp-btn-ghost{background:#fff;color:#1a6ef5;border:1.5px solid #c5d9f6}
+.lp-btn-ghost:hover{background:#eff6ff}
 .lp-btn:hover{background:#0052cc}
 .lp-err{display:none;background:#ffeaea;border:1px solid #ffb3b3;color:#bf2600;padding:9px 11px;border-radius:6px;font-size:11px;margin-bottom:11px}
 .lp-hint{margin-top:16px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#999;text-align:center}
@@ -320,3 +323,32 @@ table.invT td.nm{font-weight:700}
 .rcH{font-size:13px;font-weight:800;color:#0a1628;margin-bottom:3px}
 .rcD{font-size:11.5px;color:#5c6b82;line-height:1.45;margin-bottom:8px}
 .rcOpt .btn{margin-top:2px}
+
+/* ═══ LOGIN — workspace multi-step ═════════════════════════════ */
+.lp-step{font-size:13px;font-weight:800;color:#0a1628;margin:6px 0 12px;text-align:center}
+.lp-lbl{font-size:12.5px;color:#5c6b82;margin-bottom:8px;text-align:center}
+.lp-lbl b{color:#0a1628;word-break:break-all}
+.lp-newws{margin-top:14px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#5c6b82;text-align:center}
+.lp-newws a{color:#1a6ef5;font-weight:700;text-decoration:none}
+.lp-btn:disabled{opacity:.6;cursor:default}
+
+/* ═══ LOGIN — demo industry + PIN ══════════════════════════════ */
+.lp-inds{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:6px}
+.lp-ind{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;
+  border:1.5px solid #dbe2ec;border-radius:11px;background:#fff;cursor:pointer;
+  font-size:12px;font-weight:700;color:#33415c;transition:all .12s}
+.lp-ind span{font-size:24px;line-height:1}
+.lp-ind:hover{border-color:#c5d9f6;background:#f6faff}
+.lp-ind.on{border-color:#1a6ef5;background:#eaf2ff;color:#1152cc;box-shadow:0 2px 8px rgba(26,110,245,.2)}
+
+.pinDots{display:flex;justify-content:center;gap:11px;margin:14px 0 16px}
+.pinDots .pd{width:13px;height:13px;border-radius:50%;border:2px solid #c5d0de;background:transparent}
+.pinDots .pd.on{background:#1a6ef5;border-color:#1a6ef5}
+.pinPad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pinPad button{height:54px;border-radius:12px;border:1.5px solid #e3e8ef;background:#fff;
+  font-size:21px;font-weight:700;color:#0a1628;cursor:pointer;transition:all .1s}
+.pinPad button:hover{background:#eff6ff;border-color:#c5d9f6}
+.pinPad button:active{transform:scale(.96)}
+.pinPad .pinAux{color:#8b97a8;font-size:22px}
+.pinPad .pinOk{background:#1a6ef5;color:#fff;border-color:#1a6ef5;font-size:24px}
+.pinPad .pinOk:hover{background:#0052cc}
