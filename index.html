@@ -20,28 +20,33 @@
 
     <!-- 1) Landing: choose how to enter. Shown first. -->
     <div id="lp_welcome">
-      <div class="lp-sub">You can try the app in demo mode, or sign in to your Casri POS workspace.</div>
-      <button class="lp-btn" onclick="showPanel('workspace')">Sign in</button>
-      <button class="lp-btn lp-btn-ghost" onclick="startDemo()">Try demo</button>
+      <div class="lp-sub" data-so="Waxaad tijaabin kartaa demo, ama gal workspace-kaaga Casri POS.">You can try the app in demo mode, or sign in to your Casri POS workspace.</div>
+      <button class="lp-btn" onclick="showPanel('workspace')" data-so="Gal">Sign in</button>
+      <button class="lp-btn lp-btn-ghost" onclick="startDemo()" data-so="Tijaabi demo">Try demo</button>
+      <div class="lp-lang">
+        <button type="button" id="lpLangEn" class="lp-lang-b on" onclick="lpSetLang('en')">English</button>
+        <button type="button" id="lpLangSo" class="lp-lang-b" onclick="lpSetLang('so')">Soomaali</button>
+      </div>
     </div>
 
     <!-- 1b) Demo: pick an industry so the demo opens with a fitting menu. -->
     <div id="lp_demo" style="display:none">
-      <div class="lp-step">Select industry</div>
+      <div class="lp-step" data-so="Dooro warshad">Select industry</div>
       <div class="lp-inds" id="lp_inds">
         <button type="button" class="lp-ind" data-ind="bar"        onclick="pickInd('bar',this)"><span>&#127865;</span>Juice / Tea bar</button>
         <button type="button" class="lp-ind" data-ind="cafe"       onclick="pickInd('cafe',this)"><span>&#9749;</span>Cafe</button>
         <button type="button" class="lp-ind" data-ind="restaurant" onclick="pickInd('restaurant',this)"><span>&#127869;</span>Restaurant</button>
         <button type="button" class="lp-ind" data-ind="retail"     onclick="pickInd('retail',this)"><span>&#128230;</span>Retail</button>
       </div>
-      <button class="lp-btn" onclick="demoContinue()">Continue</button>
+      <button class="lp-btn" onclick="demoContinue()" data-so="Sii wad">Continue</button>
+      <div class="lp-newws"><span data-so="Diyaar u tahay iib dhab ah?">Ready to sell for real?</span> <a href="javascript:void(0)" onclick="showPanel('create')" data-so="Samee workspace Casri POS ah">Create a Casri POS workspace</a></div>
       <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('welcome')">&#8592; Back</a></div>
     </div>
 
     <!-- 1c) Demo PIN — any PIN works, it just feels like a real till login. -->
     <div id="lp_pin" style="display:none">
-      <div class="lp-step">Demo</div>
-      <div class="lp-lbl">Use any PIN you like to log in</div>
+      <div class="lp-step" data-so="Demo">Demo</div>
+      <div class="lp-lbl" data-so="Isticmaal PIN kasta si aad u gasho">Use any PIN you like to log in</div>
       <div class="pinDots" id="pin_dots"></div>
       <div class="pinPad">
         <button type="button" onclick="pinTap('1')">1</button>
@@ -62,10 +67,10 @@
 
     <!-- 2) Workspace: enter the cloud email that identifies this shop's workspace. -->
     <div id="lp_workspace" style="display:none">
-      <div class="lp-step">Sign in</div>
-      <div class="lp-lbl">Enter your workspace email</div>
+      <div class="lp-step" data-so="Gal">Sign in</div>
+      <div class="lp-lbl" data-so="Geli iimaylka workspace-kaaga">Enter your workspace email</div>
       <div class="lp-row"><span class="ic">&#9729;</span><input type="email" id="ws_email" placeholder="owner@myshop.com" autocomplete="username" inputmode="email"></div>
-      <button class="lp-btn" onclick="wsContinue()">Continue</button>
+      <button class="lp-btn" onclick="wsContinue()" data-so="Sii wad">Continue</button>
       <div class="lp-err" id="ws_err">Enter your workspace email</div>
       <div class="lp-newws">No workspace? <a href="javascript:void(0)" onclick="showPanel('create')">Create a Casri POS workspace</a></div>
       <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('staff')">Staff sign-in (works offline)</a></div>
@@ -74,21 +79,28 @@
 
     <!-- 3) Password for that workspace. -->
     <div id="lp_pwd" style="display:none">
-      <div class="lp-step">Sign in</div>
+      <div class="lp-step" data-so="Gal">Sign in</div>
       <div class="lp-lbl">Workspace <b id="pwd_email">—</b></div>
-      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="ws_pwd" placeholder="Password" autocomplete="current-password"></div>
-      <button class="lp-btn" onclick="wsSignIn()">Sign in</button>
+      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="ws_pwd" placeholder="Password" autocomplete="current-password" data-ph-so="Furaha"></div>
+      <button class="lp-btn" onclick="wsSignIn()" data-so="Gal">Sign in</button>
       <div class="lp-err" id="pwd_err">Wrong password</div>
       <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('workspace')">&#8592; Use a different workspace</a></div>
     </div>
 
     <!-- 4) Create a new workspace (cloud account + first business). -->
     <div id="lp_create" style="display:none">
-      <div class="lp-step">Create workspace</div>
-      <div class="lp-row"><span class="ic">&#127970;</span><input type="text" id="cw_biz" placeholder="Business name"></div>
-      <div class="lp-row"><span class="ic">&#9729;</span><input type="email" id="cw_email" placeholder="Workspace email" inputmode="email"></div>
-      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="cw_pwd" placeholder="Password (min 6)"></div>
-      <button class="lp-btn" onclick="wsCreate()">Create workspace</button>
+      <div class="lp-step" data-so="Samee workspace">Create workspace</div>
+      <div class="lp-row"><span class="ic">&#127970;</span><input type="text" id="cw_biz" placeholder="Business name" data-ph-so="Magaca ganacsiga"></div>
+      <div class="lp-plabel" data-so="Dooro qorshe">Choose a plan</div>
+      <div class="lp-plans" id="cw_plans">
+        <button type="button" class="lp-plan on" data-plan="MPQ50"  onclick="pickPlan('MPQ50',this)"><b>MPQ50</b><span>50 items<br>1 register</span></button>
+        <button type="button" class="lp-plan" data-plan="MPQ100" onclick="pickPlan('MPQ100',this)"><b>MPQ100</b><span>100 items<br>2 registers</span></button>
+        <button type="button" class="lp-plan" data-plan="MPQ200" onclick="pickPlan('MPQ200',this)"><b>MPQ200</b><span>200 items<br>3 registers</span></button>
+      </div>
+      <div class="lp-note" data-so="Qorshe kastaa wuxuu leeyahay cloud, warbixinno &amp; isku&#8209;xidhka terminalka lacag&#8209;bixinta">Every plan includes cloud service, reporting &amp; payment&#8209;terminal integration</div>
+      <div class="lp-row"><span class="ic">&#9729;</span><input type="email" id="cw_email" placeholder="Workspace email" inputmode="email" data-ph-so="Iimaylka workspace"></div>
+      <div class="lp-row"><span class="ic">&#128274;</span><input type="password" id="cw_pwd" placeholder="Password (min 6)" data-ph-so="Furaha (ugu yaraan 6)"></div>
+      <button class="lp-btn" onclick="wsCreate()" data-so="Samee workspace">Create workspace</button>
       <div class="lp-err" id="cw_err">Fill in all fields</div>
       <div class="lp-forgot"><a href="javascript:void(0)" onclick="showPanel('workspace')">&#8592; Back</a></div>
     </div>

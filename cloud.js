@@ -317,11 +317,12 @@ function isCloudMaster() {
   return !!m && (CLOUD.email || "").trim().toLowerCase() === m;
 }
 // Register the current account as a pending workspace (approved:false).
-function cloudRegisterWorkspace(name) {
+function cloudRegisterWorkspace(name, plan) {
   return _cloudFreshToken().then(function (token) {
     var body = { fields: {
       email:     { stringValue: CLOUD.email || "" },
       name:      { stringValue: name || "" },
+      plan:      { stringValue: plan || "" },
       approved:  { booleanValue: false },
       createdAt: { integerValue: String(Date.now()) }
     } };
@@ -344,7 +345,8 @@ function cloudWorkspaceStatus() {
       return r.json().then(function (doc) {
         var f = (doc && doc.fields) || {};
         return { exists: true, approved: !!(f.approved && f.approved.booleanValue),
-                 name: (f.name && f.name.stringValue) || "", email: (f.email && f.email.stringValue) || "" };
+                 name: (f.name && f.name.stringValue) || "", email: (f.email && f.email.stringValue) || "",
+                 plan: (f.plan && f.plan.stringValue) || "" };
       });
     });
   });
@@ -364,6 +366,7 @@ function cloudListWorkspaces() {
           uid: nm.substring(nm.lastIndexOf("/") + 1),
           email: (f.email && f.email.stringValue) || "",
           name: (f.name && f.name.stringValue) || "",
+          plan: (f.plan && f.plan.stringValue) || "",
           approved: !!(f.approved && f.approved.booleanValue),
           createdAt: parseInt((f.createdAt && f.createdAt.integerValue) || "0", 10)
         };

@@ -4,8 +4,10 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 a{color:#1a6ef5;text-decoration:none}
 
 /* ═══ LOGIN ═══════════════════════════════════════════════════ */
-#LP{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a1628 0%,#1a4dc4 100%);padding:20px;z-index:10}
-.lp-card{width:100%;max-width:380px;background:#fff;border-radius:14px;padding:30px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+#LP{position:fixed;inset:0;display:flex;overflow-y:auto;background:linear-gradient(135deg,#0a1628 0%,#1a4dc4 100%);padding:20px;z-index:10}
+.lp-card{width:100%;max-width:380px;margin:auto;background:#fff;border-radius:14px;padding:30px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+@media(max-height:760px){.lp-card{padding:22px 26px}}
+@media(max-width:420px){.lp-card{padding:24px 20px}}
 .lp-logo{width:60px;height:60px;background:#1a6ef5;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;margin:0 auto 14px}
 .lp-title{font-size:22px;font-weight:800;color:#0a1628;text-align:center;margin-bottom:4px}
 .lp-sub{font-size:12px;color:#666;text-align:center;margin-bottom:22px}
@@ -340,6 +342,22 @@ table.invT td.nm{font-weight:700}
 .lp-ind span{font-size:24px;line-height:1}
 .lp-ind:hover{border-color:#c5d9f6;background:#f6faff}
 .lp-ind.on{border-color:#1a6ef5;background:#eaf2ff;color:#1152cc;box-shadow:0 2px 8px rgba(26,110,245,.2)}
+
+/* create-workspace plan picker — compact 3-across */
+.lp-plabel{font-size:10.5px;font-weight:700;color:#5c6a80;text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+.lp-plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:6px}
+.lp-plan{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:9px 4px;border:1.5px solid #dbe2ec;border-radius:10px;background:#fff;cursor:pointer;text-align:center;font-family:inherit;transition:all .12s}
+.lp-plan b{font-size:13px;font-weight:800;color:#0c1420}
+.lp-plan span{font-size:9.5px;color:#5c6a80;line-height:1.3}
+.lp-plan:hover{border-color:#c5d9f6;background:#f6faff}
+.lp-plan.on{border-color:#1a6ef5;background:#eaf2ff;box-shadow:0 2px 8px rgba(26,110,245,.2)}
+.lp-plan.on b{color:#1152cc}
+.lp-note{font-size:10px;color:#7c8aa0;margin:0 0 10px;text-align:center;line-height:1.35}
+
+/* login language toggle */
+.lp-lang{display:flex;justify-content:center;gap:0;margin:14px auto 0;border:1px solid #e2e8f2;border-radius:999px;padding:3px;width:fit-content}
+.lp-lang-b{background:transparent;border:none;padding:6px 18px;border-radius:999px;font-size:13px;font-weight:700;color:#5c6a80;cursor:pointer;font-family:inherit;transition:all .12s}
+.lp-lang-b.on{background:#1a6ef5;color:#fff}
 
 .pinDots{display:flex;justify-content:center;gap:11px;margin:14px 0 16px}
 .pinDots .pd{width:13px;height:13px;border-radius:50%;border:2px solid #c5d0de;background:transparent}

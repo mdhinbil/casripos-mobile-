@@ -251,7 +251,10 @@ function wsSignIn(){
     if(!recoveryEmail())setRecoveryEmail(em);
     // Super admin → the Workspaces approval console, not a till.
     if(typeof isCloudMaster==="function"&&isCloudMaster()){
-      return ((typeof cloudPull==="function")?cloudPull(true):Promise.resolve()).then(function(){ _enterAsMaster(); });
+      _wipeLocalPOS();
+      return ((typeof cloudPull==="function")?cloudPull(true):Promise.resolve()).then(function(){
+        _reloadStateFromStorage(); _enterAsMaster();
+      });
     }
     // Everyone else: only signed-in AND approved workspaces may open the till.
     return cloudWorkspaceStatus().then(function(st){
@@ -260,10 +263,14 @@ function wsSignIn(){
         return cloudRegisterWorkspace("").then(function(){ throw new Error("__PENDING__"); });
       }
       if(!st.approved) throw new Error("__PENDING__");
-      return (typeof cloudPull==="function")?cloudPull(true):null;   // take the cloud copy
-    }).then(function(){
-      _enterAsAdmin();
-      toast(T("Signed in to workspace","Waad gashay workspace-ka"));
+      var wsName=st.name||"";
+      // Take ONLY this account's data: clear any previous account's till first.
+      _wipeLocalPOS();
+      return ((typeof cloudPull==="function")?cloudPull(true):Promise.resolve()).then(function(){
+        _reloadStateFromStorage();
+        _enterAsClient(wsName);   // locked to their one workspace business
+        toast(T("Signed in to workspace","Waad gashay workspace-ka"));
+      });
     });
   }).catch(function(e){
     if(btn)btn.disabled=false;
@@ -284,8 +291,18 @@ function wsCreate(){
   if(!nm||em.indexOf("@")<0||pw.length<6){_lpErr("cw_err",T("Fill all fields (password 6+)","Buuxi dhammaan (fur 6+)"));return;}
   if(typeof cloudSignIn!=="function"){_lpErr("cw_err",T("Cloud unavailable","Cloud lama heli karo"));return;}
   var btn=(typeof event!=="undefined"&&event)?event.target:null;if(btn)btn.disabled=true;
-  // Name the current default business, so the new workspace starts with theirs.
-  var b=BIZ_LIST&&BIZ_LIST[0];if(b){b.name=nm;_save("pos_biz_list",BIZ_LIST);}
+  // A new workspace starts CLEAN: exactly ONE business (theirs). Drop any other
+  // businesses that happen to be on this device so the new cloud account never
+  // accumulates shops that aren't this client's.
+  var cur=(BIZ_LIST&&BIZ_LIST.find(function(x){return x.id===CURRENT_BIZ_ID;}))||(BIZ_LIST&&BIZ_LIST[0])||{};
+  var pl=PLANS[CW_PLAN]?CW_PLAN:"MPQ50";
+  var only={id:cur.id||"b1",name:nm,addr:cur.addr||"",phone:cur.phone||"",tax:cur.tax||0,currency:cur.currency||"USD",type:cur.type||"shop",
+            plan:pl,maxProducts:PLANS[pl].maxProducts,registers:PLANS[pl].registers};
+  BIZ_LIST=[only];CURRENT_BIZ_ID=only.id;
+  _save("pos_biz_list",BIZ_LIST);_save("pos_current_biz",CURRENT_BIZ_ID);
+  PRODUCTS=PRODUCTS.filter(function(p){return p.bizId===only.id;});_save("pos_prod",PRODUCTS);
+  SALES=SALES.filter(function(s){return s.bizId===only.id;});_save("pos_sales",SALES);
+  INVOICES=INVOICES.filter(function(x){return x.bizId===only.id;});_save("pos_inv",INVOICES);
   cloudSignIn(em,pw,true).then(function(){        // signUp
     setRecoveryEmail(em);
     return (typeof cloudPushAll==="function")?cloudPushAll():null;   // seed the cloud from this device
@@ -293,7 +310,7 @@ function wsCreate(){
     // The super-admin account skips approval and goes straight to the console.
     if(typeof isCloudMaster==="function"&&isCloudMaster()){ _enterAsMaster(); return; }
     // Every other new workspace is locked until the super admin approves it.
-    return cloudRegisterWorkspace(nm).then(function(){
+    return cloudRegisterWorkspace(nm,pl).then(function(){
       if(typeof cloudSignOut==="function")cloudSignOut();
       igAlert(T("Workspace created.\n\nIt is now waiting for MareegTech to approve it. You can sign in once it has been approved.",
                "Workspace-ka waa la sameeyay.\n\nWuxuu sugayaa in MareegTech ay ansixiso. Waad geli kartaa marka la ansixiyo."));
@@ -306,6 +323,7 @@ function wsCreate(){
 }
 // Open the till as the workspace admin after a cloud sign-in.
 function _enterAsAdmin(){
+  MASTER_SESSION=false;DEMO_MODE=false;
   var admin=ACCOUNTS.find(function(a){return a.active&&a.role==="admin"&&!a.bizId;})
           ||ACCOUNTS.find(function(a){return a.active&&a.role==="admin";})
           ||ACCOUNTS[0];
@@ -317,9 +335,68 @@ function _enterAsAdmin(){
 // Super admin lands on the Workspaces approval console instead of a till.
 function _enterAsMaster(){
   _enterAsAdmin();
+  MASTER_SESSION=true;      // this session IS the Workspaces console
   buildNav();               // include the master-only Workspaces item
   goTo("workspaces");
   toast(T("Signed in as super admin","Waxaad u gashay maamulaha guud"));
+}
+// After a cloud sign-in the till must show ONLY the signed-in account's data —
+// never whatever account used this device before. cloudPull overwrites the keys
+// an account has in the cloud, but a missing key would leave the previous
+// account's data behind (so a client could land in someone else's workspace).
+// So: wipe local first, pull, then reload state (clean default if the account is
+// brand new / empty).
+var POS_KEYS=["pos_biz_list","pos_current_biz","pos_prod","pos_sales","pos_inv","pos_acc","pos_fx"];
+function _wipeLocalPOS(){
+  POS_KEYS.forEach(function(k){ try{localStorage.removeItem(k);localStorage.removeItem("pos_ts_"+k);}catch(e){} });
+}
+function _reloadStateFromStorage(){
+  BIZ_LIST=_load("pos_biz_list",null);
+  if(!BIZ_LIST||!BIZ_LIST.length){
+    BIZ_LIST=[{id:"b1",name:"Casri POS",addr:"",phone:"",tax:0,currency:"USD",type:"shop"}];
+    _save("pos_biz_list",BIZ_LIST);
+  }
+  BIZ_LIST.forEach(function(b){if(!b.id)b.id="b"+Date.now();if(!b.type)b.type="shop";});
+  CURRENT_BIZ_ID=_load("pos_current_biz","");
+  if(!BIZ_LIST.find(function(b){return b.id===CURRENT_BIZ_ID;}))CURRENT_BIZ_ID=BIZ_LIST[0].id;
+  _save("pos_current_biz",CURRENT_BIZ_ID);
+  ACCOUNTS=_load("pos_acc",[
+    {id:"a1",username:"admin",password:"admin123",name:"Admin",role:"admin",active:true},
+    {id:"a2",username:"cashier",password:"cash123",name:"Cashier",role:"cashier",active:true}
+  ]);
+  PRODUCTS=_load("pos_prod",[]);
+  SALES=_load("pos_sales",[]);
+  INVOICES=_load("pos_inv",[]);
+}
+// A cloud CLIENT owns exactly one workspace = one business. Enter LOCKED to it:
+// scoped admin (has bizId) so there is no business switcher and no Businesses
+// page, and every page reads only this business's data. The workspace business
+// is matched by the name stored in the approval registry (falls back to the
+// active/first business).
+function _enterAsClient(wsName){
+  MASTER_SESSION=false;DEMO_MODE=false;
+  var matched=wsName&&BIZ_LIST.find(function(b){return (b.name||"").toLowerCase()===String(wsName).toLowerCase();});
+  var biz=matched||BIZ_LIST.find(function(b){return b.id===CURRENT_BIZ_ID;})||BIZ_LIST[0];
+  if(biz){
+    CURRENT_BIZ_ID=biz.id;
+    // A workspace holds exactly ONE business. When we can confidently identify
+    // it (name matches the approval registry), PERMANENTLY drop any stray
+    // businesses + their products/sales/invoices left over from earlier testing.
+    // Guarded by the name match so a wrong guess can never delete real data.
+    if(matched&&BIZ_LIST.length>1){
+      BIZ_LIST=[biz];_save("pos_biz_list",BIZ_LIST);
+      PRODUCTS=PRODUCTS.filter(function(p){return p.bizId===biz.id;});_save("pos_prod",PRODUCTS);
+      SALES=SALES.filter(function(s){return s.bizId===biz.id;});_save("pos_sales",SALES);
+      INVOICES=INVOICES.filter(function(x){return x.bizId===biz.id;});_save("pos_inv",INVOICES);
+    }
+    _save("pos_current_biz",CURRENT_BIZ_ID);
+  }
+  var adm=ACCOUNTS.find(function(a){return a.active&&a.role==="admin";});
+  CURRENT_USER={id:(adm&&adm.id)||"owner",name:(adm&&adm.name)||"Owner",role:"admin",bizId:CURRENT_BIZ_ID,active:true};
+  CURRENCY=(biz&&biz.currency)||"USD";
+  $("LP").style.display="none";
+  $("AP").classList.add("open");
+  buildNav();renderUser();setLang(LANG);goTo("dashboard");
 }
 // Demo mode: first pick an industry, then open the app as a cashier with a
 // fitting sample menu (no admin pages). Data still saves locally like any till.
@@ -330,6 +407,24 @@ function pickInd(kind,btn){
   var box=$("lp_inds");
   if(box){var bs=box.querySelectorAll(".lp-ind");for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i]===btn);}
 }
+// ── Plans (chosen when creating a workspace) ──────────────────
+// Every plan includes cloud service, reporting and payment-terminal
+// integration; they differ by max products and number of cash registers.
+var PLANS={
+  MPQ50: {maxProducts:50,  registers:1},
+  MPQ100:{maxProducts:100, registers:2},
+  MPQ200:{maxProducts:200, registers:3}
+};
+var CW_PLAN="MPQ50";
+function pickPlan(p,btn){
+  CW_PLAN=p;
+  var box=$("cw_plans");
+  if(box){var bs=box.querySelectorAll(".lp-plan");for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i]===btn);}
+}
+// The active business's plan limits (0 = no limit, for legacy shops with no plan).
+function _planOf(){var b=(typeof gB==="function"&&gB())||{};return PLANS[b.plan]||{maxProducts:b.maxProducts||0,registers:b.registers||0};}
+function _planMax(){return _planOf().maxProducts||0;}
+function _planRegisters(){return _planOf().registers||0;}
 // Industry chosen → go to the PIN screen.
 function demoContinue(){showPanel("pin");_pinSet("");}
 // PIN keypad. For demo, any PIN works — it just feels like a real till login.
@@ -339,6 +434,7 @@ function pinTap(n){_pinSet(DEMO_PIN+n);}
 function pinDel(){_pinSet(DEMO_PIN.slice(0,-1));}
 function demoEnter(){
   if(!DEMO_PIN){toast(T("Enter any PIN","Geli PIN kasta"));return;}
+  MASTER_SESSION=false;DEMO_MODE=true;
   // Demo signs in as a CASHIER only — the admin pages (Businesses, Users,
   // Settings) stay hidden so the demo can't change the setup.
   var demo=ACCOUNTS.find(function(a){return a.active&&a.role==="cashier";})
@@ -352,17 +448,21 @@ function demoEnter(){
   // default shop items (or a previously-picked industry) mixed in.
   var IND_NAMES={cafe:"Demo Café",restaurant:"Demo Restaurant",bar:"Demo Juice / Tea Bar",retail:"Demo Retail"};
   var b=BIZ_LIST.find(function(x){return x.id===CURRENT_BIZ_ID;});
-  if(b){b.type=DEMO_IND;b.name=IND_NAMES[DEMO_IND]||b.name;_save("pos_biz_list",BIZ_LIST);}
+  if(b){b.type=DEMO_IND;b.name=IND_NAMES[DEMO_IND]||b.name;b.plan="";b.maxProducts=10;b.registers=1;_save("pos_biz_list",BIZ_LIST);}
   CURRENCY=(b&&b.currency)||"USD";
   PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});
   _save("pos_prod",PRODUCTS);
   if(typeof _seedSamples==="function")_seedSamples(DEMO_IND,true);
+  // Demo is a small taster — cap the menu at 10 products per industry.
+  var _mine=PRODUCTS.filter(function(p){return p.bizId===CURRENT_BIZ_ID;});
+  if(_mine.length>10){var _keep={};_mine.slice(0,10).forEach(function(p){_keep[p.id]=1;});PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID||_keep[p.id];});_save("pos_prod",PRODUCTS);}
   $("LP").style.display="none";
   $("AP").classList.add("open");
   buildNav();renderUser();setLang(LANG);goTo("pos");
   toast(T("Demo — sign out to exit","Demo — ka bax si aad uga baxdo"));
 }
 function doLogin(){
+  MASTER_SESSION=false;DEMO_MODE=false;
   var u=$("loginUser").value.trim(),p=$("loginPass").value;
   var acc=ACCOUNTS.find(function(a){return a.active&&a.username.toLowerCase()===u.toLowerCase()&&a.password===p;});
   if(!acc){$("loginErr").style.display="block";return;}
@@ -399,10 +499,30 @@ async function doLogout(){
 // ── LANGUAGE TOGGLE ──────────────────────────────────────────
 function setLang(l){
   LANG=l;
-  $("langEN").classList.toggle("on",l==="en");
-  $("langSO").classList.toggle("on",l==="so");
+  try{localStorage.setItem("pos_lang",l);}catch(e){}
+  var e=$("langEN"),s=$("langSO");
+  if(e)e.classList.toggle("on",l==="en");
+  if(s)s.classList.toggle("on",l==="so");
+  applyLoginLang();
   if(CURRENT_USER){buildNav();renderUser();renderPage(PAGE);}
 }
+// Translate the login screen in place: every element with data-so swaps its
+// text (data-ph-so swaps a placeholder). The original English is captured once.
+function applyLoginLang(){
+  var lp=document.getElementById("LP");if(!lp)return;
+  lp.querySelectorAll("[data-so]").forEach(function(el){
+    if(!el.hasAttribute("data-en"))el.setAttribute("data-en",el.textContent);
+    el.textContent=(LANG==="so")?el.getAttribute("data-so"):el.getAttribute("data-en");
+  });
+  lp.querySelectorAll("[data-ph-so]").forEach(function(el){
+    if(!el.hasAttribute("data-ph-en"))el.setAttribute("data-ph-en",el.getAttribute("placeholder")||"");
+    el.setAttribute("placeholder",(LANG==="so")?el.getAttribute("data-ph-so"):el.getAttribute("data-ph-en"));
+  });
+  var le=document.getElementById("lpLangEn"),ls=document.getElementById("lpLangSo");
+  if(le)le.classList.toggle("on",LANG==="en");
+  if(ls)ls.classList.toggle("on",LANG==="so");
+}
+function lpSetLang(l){setLang(l);}
 
 // ── SIDEBAR NAV ──────────────────────────────────────────────
 var NAV_ALL=[
@@ -417,7 +537,14 @@ var NAV_ALL=[
   {id:"settings",  en:"Settings",      so:"Habayn",          ic:"⚙️", admin:true},
   {id:"workspaces",en:"Workspaces",    so:"Workspace-yada",  ic:"🗂️", master:true}
 ];
-function _isMaster(){return typeof isCloudMaster==="function"&&isCloudMaster();}
+// True ONLY while the current session is the super-admin Workspaces console.
+// (Not derived from the saved cloud email — a demo/cashier/client session on a
+// device that once signed in as master must NOT show the Workspaces menu.)
+var MASTER_SESSION=false;
+function _isMaster(){return MASTER_SESSION;}
+// True only in a demo session — trims the menu to the basics (no Sales History,
+// Invoices or Reports).
+var DEMO_MODE=false;
 function buildNav(){
   var nav=$("sbNav"),h="";
   // Super-admin: business switcher dropdown.
@@ -435,6 +562,7 @@ function buildNav(){
   }
   NAV_ALL.forEach(function(it){
     if(it.master&&!_isMaster())return;      // Workspaces console — super admin only
+    if(DEMO_MODE&&(it.id==="sales"||it.id==="invoices"||it.id==="reports"))return; // demo = basics only
     if(it.admin&&CURRENT_USER.role!=="admin")return;
     // Businesses page is super-admin only — per-business admins can't see the master list.
     if(it.id==="businesses"&&!isSuperAdmin())return;
@@ -475,6 +603,8 @@ function renderPage(id){
   if((id==="users"||id==="settings")&&(!CURRENT_USER||CURRENT_USER.role!=="admin"))id="dashboard";
   // Workspaces approval console is super-admin only.
   if(id==="workspaces"&&!_isMaster())id="dashboard";
+  // Demo hides Sales History, Invoices and Reports.
+  if(DEMO_MODE&&(id==="sales"||id==="invoices"||id==="reports"))id="dashboard";
   var fn=PAGES[id]||PAGES.dashboard;
   try{
     var html=fn();
@@ -1598,6 +1728,11 @@ function saveProduct(){
     var p=PRODUCTS.find(function(x){return x.id===EDIT_PROD;});
     if(p){p.name=nm;p.cat=$("mp_cat").value.trim();p.price=pr;p.stock=stk;p.icon=$("mp_ic").value.trim();p.sku=sku;p.barcode=bc;}
   } else {
+    var lim=_planMax();
+    if(lim&&forBiz(PRODUCTS).length>=lim){
+      toast(T("Plan limit reached — "+lim+" products max. Upgrade to add more.","Xadka qorshaha — ugu badnaan "+lim+" alaab. Kor u qaad."));
+      return;
+    }
     PRODUCTS.push({id:"p"+Date.now(),bizId:CURRENT_BIZ_ID,name:nm,cat:$("mp_cat").value.trim(),price:pr,stock:stk,icon:$("mp_ic").value.trim()||"📦",sku:sku,barcode:bc});
   }
   _save("pos_prod",PRODUCTS);
@@ -1767,12 +1902,12 @@ function _loadWorkspacesAdmin(){
     var pend=list.filter(function(w){return !w.approved;}).length;
     var h="";
     if(pend)h+="<div style=\"font-weight:700;color:#c23b3b;margin-bottom:8px\">"+pend+" "+T("awaiting approval","sugaya ansixin")+"</div>";
-    h+="<table><thead><tr><th>"+T("Workspace","Workspace")+"</th><th>"+T("Email","Email")+"</th><th>"+T("Status","Xaalad")+"</th><th></th></tr></thead><tbody>";
+    h+="<table><thead><tr><th>"+T("Workspace","Workspace")+"</th><th>"+T("Email","Email")+"</th><th>"+T("Plan","Qorshe")+"</th><th>"+T("Status","Xaalad")+"</th><th></th></tr></thead><tbody>";
     list.forEach(function(w){
       var st=w.approved
         ?"<span style=\"color:#1f9d63;font-weight:700\">&#10003; "+T("Approved","La ansixiyay")+"</span>"
         :"<span style=\"color:#c23b3b;font-weight:700\">&#9679; "+T("Pending","Sugaya")+"</span>";
-      h+="<tr><td>"+esc(w.name||"—")+"</td><td style=\"font-size:12px;color:#5c6a80\">"+esc(w.email||"—")+"</td><td>"+st+"</td><td style=\"text-align:right\">";
+      h+="<tr><td>"+esc(w.name||"—")+"</td><td style=\"font-size:12px;color:#5c6a80\">"+esc(w.email||"—")+"</td><td style=\"font-weight:700\">"+esc(w.plan||"—")+"</td><td>"+st+"</td><td style=\"text-align:right\">";
       if(w.approved) h+="<button class=\"btn\" onclick=\"setWorkspaceApproval('"+esc(w.uid)+"',false)\">"+T("Revoke","Ka noqo")+"</button>";
       else h+="<button class=\"btn\" style=\"background:#1f9d63;color:#fff;border-color:#1f9d63\" onclick=\"setWorkspaceApproval('"+esc(w.uid)+"',true)\">"+T("Approve","Ansixi")+"</button>";
       h+="</td></tr>";
@@ -1972,6 +2107,15 @@ async function _newAccount(){
   if(ACCOUNTS.find(function(a){return a.username.toLowerCase()===user.toLowerCase();})){toast(T("Username taken","Magaca waa la qaatay"));return;}
   var pass=await igAskText(T("Password","Sirta"));if(!pass)return;
   var role=await igAsk(T("Make admin? (OK = admin, Cancel = cashier)","Maamulaha ka dhig?"))?"admin":"cashier";
+  // Cash-register limit: the plan caps how many cashier logins a shop may have.
+  if(role==="cashier"){
+    var reg=_planRegisters();
+    if(reg){
+      var scopeId=CURRENT_USER.bizId||CURRENT_BIZ_ID;
+      var used=ACCOUNTS.filter(function(a){return a.active&&a.role==="cashier"&&a.bizId===scopeId;}).length;
+      if(used>=reg){toast(T("Plan limit — "+reg+" cash register"+(reg>1?"s":"")+" max. Upgrade for more.","Xadka qorshaha — "+reg+" kaash rijistar. Kor u qaad."));return;}
+    }
+  }
   // Scope new accounts to a specific business. Default = active business.
   // Per-business admins always get their own business. Super-admin picks.
   var scope=CURRENT_USER.bizId||CURRENT_BIZ_ID;
@@ -2199,10 +2343,11 @@ async function _wipeSales(){if(!await igAsk(T("Delete ALL sales in "+BIZ.name+"?
   if("serviceWorker" in navigator){
     window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});
   }
-  // Pre-select EN
+  // Restore the saved language and apply it to the login screen + header.
   setTimeout(function(){
-    $("langEN").classList.add("on");
-    $("loginUser").focus();
+    try{var l=localStorage.getItem("pos_lang");if(l==="so"||l==="en")LANG=l;}catch(e){}
+    setLang(LANG);
+    if($("loginUser"))$("loginUser").focus();
   },50);
   // Enter to submit on login
   $("loginPass").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
