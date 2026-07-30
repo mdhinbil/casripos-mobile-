@@ -302,6 +302,91 @@ function cloudRecoverAccounts(email, password) {
   });
 }
 
+// ── workspace approval registry ─────────────────────────────
+//  A small shared collection, casripos_workspaces/{uid}, holds one doc per
+//  workspace: { email, name, approved }. A client can only create/read its OWN
+//  doc; the super-admin account can list all and flip `approved`. It holds NO
+//  shop data — a client's products/sales stay private to their own uid.
+function _wsRegURL(uid) {
+  return "https://firestore.googleapis.com/v1/projects/" + CLOUD.cfg.projectId +
+         "/databases/(default)/documents/casripos_workspaces/" + (uid || CLOUD.uid);
+}
+// True when the signed-in cloud account is the configured super admin.
+function isCloudMaster() {
+  var m = ((typeof window !== "undefined" && window.CASRI_MASTER_EMAIL) || "").trim().toLowerCase();
+  return !!m && (CLOUD.email || "").trim().toLowerCase() === m;
+}
+// Register the current account as a pending workspace (approved:false).
+function cloudRegisterWorkspace(name) {
+  return _cloudFreshToken().then(function (token) {
+    var body = { fields: {
+      email:     { stringValue: CLOUD.email || "" },
+      name:      { stringValue: name || "" },
+      approved:  { booleanValue: false },
+      createdAt: { integerValue: String(Date.now()) }
+    } };
+    return fetch(_wsRegURL(CLOUD.uid), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (j) { throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status)); });
+      return true;
+    });
+  });
+}
+// This account's approval status: { exists, approved, name, email }.
+function cloudWorkspaceStatus() {
+  return _cloudFreshToken().then(function (token) {
+    return fetch(_wsRegURL(CLOUD.uid), { headers: { Authorization: "Bearer " + token } }).then(function (r) {
+      if (r.status === 404) return { exists: false, approved: false };
+      if (!r.ok) return r.json().then(function (j) { throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status)); });
+      return r.json().then(function (doc) {
+        var f = (doc && doc.fields) || {};
+        return { exists: true, approved: !!(f.approved && f.approved.booleanValue),
+                 name: (f.name && f.name.stringValue) || "", email: (f.email && f.email.stringValue) || "" };
+      });
+    });
+  });
+}
+// Super admin: list every workspace.
+function cloudListWorkspaces() {
+  return _cloudFreshToken().then(function (token) {
+    var url = "https://firestore.googleapis.com/v1/projects/" + CLOUD.cfg.projectId +
+              "/databases/(default)/documents/casripos_workspaces?pageSize=300";
+    return fetch(url, { headers: { Authorization: "Bearer " + token } }).then(function (r) {
+      if (!r.ok) return r.json().then(function (j) { throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function (j) {
+      return (j.documents || []).map(function (doc) {
+        var f = doc.fields || {}, nm = doc.name || "";
+        return {
+          uid: nm.substring(nm.lastIndexOf("/") + 1),
+          email: (f.email && f.email.stringValue) || "",
+          name: (f.name && f.name.stringValue) || "",
+          approved: !!(f.approved && f.approved.booleanValue),
+          createdAt: parseInt((f.createdAt && f.createdAt.integerValue) || "0", 10)
+        };
+      });
+    });
+  });
+}
+// Super admin: approve (or revoke) a workspace — patches only `approved`.
+function cloudApproveWorkspace(uid, approved) {
+  return _cloudFreshToken().then(function (token) {
+    var url = "https://firestore.googleapis.com/v1/projects/" + CLOUD.cfg.projectId +
+              "/databases/(default)/documents/casripos_workspaces/" + uid + "?updateMask.fieldPaths=approved";
+    return fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ fields: { approved: { booleanValue: !!approved } } })
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (j) { throw new Error((j && j.error && j.error.message) || ("HTTP " + r.status)); });
+      return true;
+    });
+  });
+}
+
 // Restore the session on boot, then quietly pull.
 function cloudBoot() {
   cloudLoad();

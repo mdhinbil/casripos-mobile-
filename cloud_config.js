@@ -9,3 +9,10 @@ window.BUNDLED_CLOUD_CFG = {
   apiKey: "AIzaSyCEZxp9W7_h2Nu1qs_wiQdrbXARVb5yvg8",
   projectId: "isguul-togdheer"
 };
+
+// The MareegTech super-admin account. This account signs in through the normal
+// "I have a workspace" login and gets the Workspaces approval page instead of a
+// till. Set this to the email you'll use as super admin, and use the SAME email
+// in the Firestore rules. New client workspaces stay locked until this account
+// approves them.
+window.CASRI_MASTER_EMAIL = "admin@mareegtech.com";

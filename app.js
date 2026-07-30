@@ -249,12 +249,30 @@ function wsSignIn(){
   var btn=(typeof event!=="undefined"&&event)?event.target:null;if(btn)btn.disabled=true;
   cloudSignIn(em,pw,false).then(function(){
     if(!recoveryEmail())setRecoveryEmail(em);
-    return (typeof cloudPull==="function")?cloudPull(true):null;   // take the cloud copy
-  }).then(function(){
-    _enterAsAdmin();
-    toast(T("Signed in to workspace","Waad gashay workspace-ka"));
+    // Super admin → the Workspaces approval console, not a till.
+    if(typeof isCloudMaster==="function"&&isCloudMaster()){
+      return ((typeof cloudPull==="function")?cloudPull(true):Promise.resolve()).then(function(){ _enterAsMaster(); });
+    }
+    // Everyone else: only signed-in AND approved workspaces may open the till.
+    return cloudWorkspaceStatus().then(function(st){
+      if(!st.exists){
+        // Made before approval existed — register it so it can be approved, then hold.
+        return cloudRegisterWorkspace("").then(function(){ throw new Error("__PENDING__"); });
+      }
+      if(!st.approved) throw new Error("__PENDING__");
+      return (typeof cloudPull==="function")?cloudPull(true):null;   // take the cloud copy
+    }).then(function(){
+      _enterAsAdmin();
+      toast(T("Signed in to workspace","Waad gashay workspace-ka"));
+    });
   }).catch(function(e){
     if(btn)btn.disabled=false;
+    if(e&&e.message==="__PENDING__"){
+      if(typeof cloudSignOut==="function")cloudSignOut();
+      _lpErr("pwd_err",T("Awaiting approval — MareegTech will approve your workspace soon.",
+                         "La sugayo ansixin — MareegTech ayaa dhawaan ansixin doonta."));
+      return;
+    }
     _lpErr("pwd_err",(typeof _cloudErrText==="function")?_cloudErrText(e.message):String(e.message));
   });
 }
@@ -272,8 +290,15 @@ function wsCreate(){
     setRecoveryEmail(em);
     return (typeof cloudPushAll==="function")?cloudPushAll():null;   // seed the cloud from this device
   }).then(function(){
-    _enterAsAdmin();
-    toast(T("Workspace created","Workspace la sameeyay"));
+    // The super-admin account skips approval and goes straight to the console.
+    if(typeof isCloudMaster==="function"&&isCloudMaster()){ _enterAsMaster(); return; }
+    // Every other new workspace is locked until the super admin approves it.
+    return cloudRegisterWorkspace(nm).then(function(){
+      if(typeof cloudSignOut==="function")cloudSignOut();
+      igAlert(T("Workspace created.\n\nIt is now waiting for MareegTech to approve it. You can sign in once it has been approved.",
+               "Workspace-ka waa la sameeyay.\n\nWuxuu sugayaa in MareegTech ay ansixiso. Waad geli kartaa marka la ansixiyo."));
+      showPanel("welcome");
+    });
   }).catch(function(e){
     if(btn)btn.disabled=false;
     _lpErr("cw_err",(typeof _cloudErrText==="function")?_cloudErrText(e.message):String(e.message));
@@ -289,8 +314,15 @@ function _enterAsAdmin(){
   $("AP").classList.add("open");
   buildNav();renderUser();setLang(LANG);goTo("dashboard");
 }
-// Demo mode: first pick an industry, then open the app as admin with a fitting
-// sample menu. Data still saves locally like any till.
+// Super admin lands on the Workspaces approval console instead of a till.
+function _enterAsMaster(){
+  _enterAsAdmin();
+  buildNav();               // include the master-only Workspaces item
+  goTo("workspaces");
+  toast(T("Signed in as super admin","Waxaad u gashay maamulaha guud"));
+}
+// Demo mode: first pick an industry, then open the app as a cashier with a
+// fitting sample menu (no admin pages). Data still saves locally like any till.
 var DEMO_IND="cafe";
 function startDemo(){showPanel("demo");}
 function pickInd(kind,btn){
@@ -307,16 +339,23 @@ function pinTap(n){_pinSet(DEMO_PIN+n);}
 function pinDel(){_pinSet(DEMO_PIN.slice(0,-1));}
 function demoEnter(){
   if(!DEMO_PIN){toast(T("Enter any PIN","Geli PIN kasta"));return;}
-  var demo=ACCOUNTS.find(function(a){return a.active&&a.username.toLowerCase()==="admin";})||ACCOUNTS[0];
-  if(!demo){toast(T("Demo unavailable","Demo lama heli karo"));return;}
+  // Demo signs in as a CASHIER only — the admin pages (Businesses, Users,
+  // Settings) stay hidden so the demo can't change the setup.
+  var demo=ACCOUNTS.find(function(a){return a.active&&a.role==="cashier";})
+         ||{id:"demo_cashier",name:"Cashier",username:"demo",password:"",role:"cashier",bizId:"",active:true};
   CURRENT_USER=demo;
   if(demo.bizId&&BIZ_LIST.find(function(b){return b.id===demo.bizId;})){
     CURRENT_BIZ_ID=demo.bizId;_save("pos_current_biz",CURRENT_BIZ_ID);
   }
-  // Set the demo business to the chosen industry and give it that menu.
+  // Set the demo business to EXACTLY the chosen industry — its name, type and a
+  // fresh menu. Clear the till's existing products first so it never shows the
+  // default shop items (or a previously-picked industry) mixed in.
+  var IND_NAMES={cafe:"Demo Café",restaurant:"Demo Restaurant",bar:"Demo Juice / Tea Bar",retail:"Demo Retail"};
   var b=BIZ_LIST.find(function(x){return x.id===CURRENT_BIZ_ID;});
-  if(b){b.type=DEMO_IND;_save("pos_biz_list",BIZ_LIST);}
+  if(b){b.type=DEMO_IND;b.name=IND_NAMES[DEMO_IND]||b.name;_save("pos_biz_list",BIZ_LIST);}
   CURRENCY=(b&&b.currency)||"USD";
+  PRODUCTS=PRODUCTS.filter(function(p){return p.bizId!==CURRENT_BIZ_ID;});
+  _save("pos_prod",PRODUCTS);
   if(typeof _seedSamples==="function")_seedSamples(DEMO_IND,true);
   $("LP").style.display="none";
   $("AP").classList.add("open");
@@ -375,8 +414,10 @@ var NAV_ALL=[
   {id:"reports",   en:"Reports",       so:"Warbixinno",      ic:"📊"},
   {id:"businesses",en:"Businesses",    so:"Ganacsiyada",     ic:"🏢", admin:true},
   {id:"users",     en:"Users",         so:"Isticmaalayaal",  ic:"👥", admin:true},
-  {id:"settings",  en:"Settings",      so:"Habayn",          ic:"⚙️", admin:true}
+  {id:"settings",  en:"Settings",      so:"Habayn",          ic:"⚙️", admin:true},
+  {id:"workspaces",en:"Workspaces",    so:"Workspace-yada",  ic:"🗂️", master:true}
 ];
+function _isMaster(){return typeof isCloudMaster==="function"&&isCloudMaster();}
 function buildNav(){
   var nav=$("sbNav"),h="";
   // Super-admin: business switcher dropdown.
@@ -393,6 +434,7 @@ function buildNav(){
     h+="<div style=\"padding:8px 14px 12px;font-size:11px;color:rgba(255,255,255,.55)\">&#127970; "+esc((gB()&&gB().name)||"-")+"</div>";
   }
   NAV_ALL.forEach(function(it){
+    if(it.master&&!_isMaster())return;      // Workspaces console — super admin only
     if(it.admin&&CURRENT_USER.role!=="admin")return;
     // Businesses page is super-admin only — per-business admins can't see the master list.
     if(it.id==="businesses"&&!isSuperAdmin())return;
@@ -429,6 +471,10 @@ function renderPage(id){
   }
   // Businesses page is super-admin only — block direct navigation, not just the nav link.
   if(id==="businesses"&&!isSuperAdmin())id="dashboard";
+  // Users & Settings are admin-only — a cashier (incl. the demo) can't reach them.
+  if((id==="users"||id==="settings")&&(!CURRENT_USER||CURRENT_USER.role!=="admin"))id="dashboard";
+  // Workspaces approval console is super-admin only.
+  if(id==="workspaces"&&!_isMaster())id="dashboard";
   var fn=PAGES[id]||PAGES.dashboard;
   try{
     var html=fn();
@@ -1692,6 +1738,61 @@ PAGES.reports=function(){
   h+="</div></div>";
   return h;
 };
+
+// ============================================================
+//  PAGE: WORKSPACES (super-admin approval console)
+//  Lists every client workspace and lets the super admin approve/revoke it.
+//  Shows only names + emails — never a client's products or sales.
+// ============================================================
+PAGES.workspaces=function(){
+  setTimeout(_loadWorkspacesAdmin,0);
+  var h="";
+  h+="<div class=\"box\"><div class=\"bH\"><div class=\"bT\">&#128455;&#65039; "+T("Client workspaces","Workspace-yada macaamiisha")+"</div>";
+  h+="<button class=\"btn\" onclick=\"_loadWorkspacesAdmin()\">&#8635; "+T("Refresh","Cusboonaysii")+"</button></div>";
+  h+="<div class=\"bB\"><div style=\"font-size:13px;color:#5c6a80;margin-bottom:12px;line-height:1.5\">"+
+     T("Approve a workspace to let its owner sign in and use the till. A workspace is locked until you approve it. Each client sees only their own data — this list shows names and emails only.",
+       "Ansixi workspace si uu leeyahiisu u galo oo u isticmaalo. Workspace-gu wuu xiran yahay ilaa aad ansixiso. Macmiil kastaa wuxuu arkaa xogtiisa oo kaliya — liiskan wuxuu tusayaa magac iyo email kaliya.")+"</div>";
+  h+="<div id=\"ws_admin\">"+T("Loading…","Waa soo shubmayaa…")+"</div>";
+  h+="</div></div>";
+  return h;
+};
+function _loadWorkspacesAdmin(){
+  var box=$("ws_admin");if(!box)return;
+  box.innerHTML=T("Loading…","Waa soo shubmayaa…");
+  if(typeof cloudListWorkspaces!=="function"){box.innerHTML="<div class=\"empty\">"+T("Cloud unavailable","Cloud lama heli karo")+"</div>";return;}
+  cloudListWorkspaces().then(function(list){
+    box=$("ws_admin");if(!box)return;
+    list.sort(function(a,b){return (a.approved-b.approved)||(b.createdAt-a.createdAt);}); // pending first
+    if(!list.length){box.innerHTML="<div class=\"empty\">"+T("No workspaces yet","Weli workspace ma jiro")+"</div>";return;}
+    var pend=list.filter(function(w){return !w.approved;}).length;
+    var h="";
+    if(pend)h+="<div style=\"font-weight:700;color:#c23b3b;margin-bottom:8px\">"+pend+" "+T("awaiting approval","sugaya ansixin")+"</div>";
+    h+="<table><thead><tr><th>"+T("Workspace","Workspace")+"</th><th>"+T("Email","Email")+"</th><th>"+T("Status","Xaalad")+"</th><th></th></tr></thead><tbody>";
+    list.forEach(function(w){
+      var st=w.approved
+        ?"<span style=\"color:#1f9d63;font-weight:700\">&#10003; "+T("Approved","La ansixiyay")+"</span>"
+        :"<span style=\"color:#c23b3b;font-weight:700\">&#9679; "+T("Pending","Sugaya")+"</span>";
+      h+="<tr><td>"+esc(w.name||"—")+"</td><td style=\"font-size:12px;color:#5c6a80\">"+esc(w.email||"—")+"</td><td>"+st+"</td><td style=\"text-align:right\">";
+      if(w.approved) h+="<button class=\"btn\" onclick=\"setWorkspaceApproval('"+esc(w.uid)+"',false)\">"+T("Revoke","Ka noqo")+"</button>";
+      else h+="<button class=\"btn\" style=\"background:#1f9d63;color:#fff;border-color:#1f9d63\" onclick=\"setWorkspaceApproval('"+esc(w.uid)+"',true)\">"+T("Approve","Ansixi")+"</button>";
+      h+="</td></tr>";
+    });
+    h+="</tbody></table>";
+    box.innerHTML=h;
+  }).catch(function(e){
+    var b2=$("ws_admin");if(b2)b2.innerHTML="<div class=\"empty\">"+esc((typeof _cloudErrText==="function")?_cloudErrText(e.message):String(e.message))+"</div>";
+  });
+}
+async function setWorkspaceApproval(uid,ok){
+  if(!ok&&!await igAsk(T("Revoke access to this workspace? The owner won't be able to sign in until re-approved.",
+                        "Ka noqo gelitaanka workspace-kan? Leeyahiisu ma geli karo ilaa dib loo ansixiyo.")))return;
+  cloudApproveWorkspace(uid,ok).then(function(){
+    toast(ok?T("Workspace approved","Workspace la ansixiyay"):T("Access revoked","Gelitaan la joojiyay"));
+    _loadWorkspacesAdmin();
+  }).catch(function(e){
+    igAlert((typeof _cloudErrText==="function")?_cloudErrText(e.message):String(e.message));
+  });
+}
 
 // ============================================================
 //  PAGE: BUSINESSES (admin only) — manage multiple Casri POS shops

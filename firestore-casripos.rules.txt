@@ -1,0 +1,41 @@
+Casri POS — Firestore security rules to ADD
+============================================
+
+Open Firebase console → Firestore Database → Rules. You already have rules for
+Isguul in this project (isguul-togdheer). DO NOT delete those. Just add the two
+`match` blocks below INSIDE your existing:
+
+    match /databases/{database}/documents {
+        ... keep all your Isguul rules ...
+
+        // ↓↓↓ add these two blocks ↓↓↓
+    }
+
+IMPORTANT: change "admin@mareegtech.com" to the exact email of your super-admin
+account — the SAME email you set in cloud_config.js (window.CASRI_MASTER_EMAIL).
+
+--------------------------------------------------------------------------------
+
+    // Casri POS — each shop's data is private to its own signed-in account.
+    // A client can never read another client's products, sales, or anything else.
+    match /casripos/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Casri POS — workspace approval registry (names + emails only, no shop data).
+    // A client may create/read ONLY their own entry and cannot self-approve.
+    // The super-admin account can list every workspace and flip `approved`.
+    match /casripos_workspaces/{wid} {
+      allow create: if request.auth != null
+                    && request.auth.uid == wid
+                    && request.resource.data.approved == false;
+      allow read:   if request.auth != null
+                    && (request.auth.uid == wid
+                        || request.auth.token.email == "admin@mareegtech.com");
+      allow update, delete: if request.auth != null
+                    && request.auth.token.email == "admin@mareegtech.com";
+    }
+
+--------------------------------------------------------------------------------
+
+After pasting, click Publish.
