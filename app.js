@@ -435,6 +435,9 @@ function pinDel(){_pinSet(DEMO_PIN.slice(0,-1));}
 function demoEnter(){
   if(!DEMO_PIN){toast(T("Enter any PIN","Geli PIN kasta"));return;}
   MASTER_SESSION=false;DEMO_MODE=true;
+  // Demo is 100% offline — sever any cloud session first so its throwaway data
+  // (Demo Café + 10 samples) can NEVER be pushed onto a real workspace's cloud.
+  if(typeof cloudSignOut==="function")cloudSignOut();
   // Demo signs in as a CASHIER only — the admin pages (Businesses, Users,
   // Settings) stay hidden so the demo can't change the setup.
   var demo=ACCOUNTS.find(function(a){return a.active&&a.role==="cashier";})
@@ -488,7 +491,10 @@ function isSuperAdmin(){return CURRENT_USER&&CURRENT_USER.role==="admin"&&!CURRE
 function isBizAdmin(){return CURRENT_USER&&CURRENT_USER.role==="admin"&&!!CURRENT_USER.bizId;}
 async function doLogout(){
   if(!await igAsk(T("Sign out?","Ka bax?")))return;
-  CURRENT_USER=null;CART=[];
+  // Fully disconnect the cloud on sign-out, so the next thing done on this
+  // device (a demo, or a different workspace) can't sync onto this account.
+  if(typeof cloudSignOut==="function")cloudSignOut();
+  CURRENT_USER=null;CART=[];DEMO_MODE=false;MASTER_SESSION=false;
   $("AP").classList.remove("open");
   $("LP").style.display="flex";
   var lu=$("loginUser");if(lu)lu.value="";
@@ -527,7 +533,7 @@ function lpSetLang(l){setLang(l);}
 // ── SIDEBAR NAV ──────────────────────────────────────────────
 var NAV_ALL=[
   {id:"dashboard", en:"Dashboard",     so:"Guriga",          ic:"🏠"},
-  {id:"pos",       en:"POS Terminal",  so:"Iibka",           ic:"💳"},
+  {id:"pos",       en:"Casri POS",     so:"Casri POS",       ic:"💳"},
   {id:"products",  en:"Products",      so:"Alaabta",         ic:"📦"},
   {id:"sales",     en:"Sales History", so:"Taariikhda Iibka",ic:"📜"},
   {id:"invoices",  en:"Invoices",      so:"Qaansheegyada",   ic:"🧾"},
@@ -605,6 +611,10 @@ function renderPage(id){
   if(id==="workspaces"&&!_isMaster())id="dashboard";
   // Demo hides Sales History, Invoices and Reports.
   if(DEMO_MODE&&(id==="sales"||id==="invoices"||id==="reports"))id="dashboard";
+  // Full-screen till: on the POS page hide the sidebar/profile and reclaim the
+  // width (the menu is still reachable via the topbar button) — like a real POS.
+  var _ap=$("AP");
+  if(_ap){ if(id==="pos"){_ap.classList.add("posmode");if(typeof closeSidebar==="function")closeSidebar();} else _ap.classList.remove("posmode"); }
   var fn=PAGES[id]||PAGES.dashboard;
   try{
     var html=fn();
@@ -684,8 +694,9 @@ PAGES.pos=function(){
   }
   cats.forEach(function(c){
     var on=CAT_FILTER===c?" on":"";
+    var col=c==="all"?"#1a6ef5":_catColor(c);   // tie each category to its tile colour
     // value stays the stored English name so filtering still matches; only the label translates
-    h+="<button class=\"catChip"+on+"\" onclick=\"CAT_FILTER='"+esc(c)+"';renderPage('pos')\">"+(c==="all"?T("All","Dhamaan"):esc(catLabel(c)))+"</button>";
+    h+="<button class=\"catChip"+on+"\" style=\"--cc:"+col+"\" onclick=\"CAT_FILTER='"+esc(c)+"';renderPage('pos')\">"+(c==="all"?T("All","Dhamaan"):esc(catLabel(c)))+"</button>";
   });
   h+="</div>";
   h+="<div class=\"prodGrid\" id=\"prodGrid\">"+_renderProductCards()+"</div>";
@@ -778,15 +789,23 @@ function _renderProductCards(){
   if(!list.length)return "<div class=\"empty\" style=\"grid-column:1/-1\"><div class=\"emIc\">&#128269;</div>"+T("No products match","Wax u dhigma ma jiraan")+"</div>";
   return list.map(function(p){
     var out=p.stock<=0?" out":"";
-    var stkCls=p.stock<=5?" low":"";
-    return "<div class=\"prodC"+out+"\" onclick=\""+(p.stock>0?"addToCart('"+p.id+"')":"toast('"+T("Out of stock","Kaydka ma jiro")+"')")+"\">"+
-      "<div class=\"pIc\">"+(p.icon||"&#128230;")+"</div>"+
-      "<div class=\"pCt\">"+esc(catLabel(p.cat||""))+"</div>"+
-      "<div class=\"pNm\">"+esc(p.name)+"</div>"+
+    var col=_catColor(p.cat);
+    var line=CART.find(function(c){return c.id===p.id;});
+    var qb=line?"<span class=\"pQty\">"+line.qty+"</span>":"";
+    var low=(p.stock>0&&p.stock<=5)?"<span class=\"pLow\">"+p.stock+"</span>":"";
+    return "<div class=\"prodC"+out+"\" style=\"--pc:"+col+"\" onclick=\""+(p.stock>0?"addToCart('"+p.id+"')":"toast('"+T("Out of stock","Kaydka ma jiro")+"')")+"\">"+
+      qb+low+
+      "<div class=\"pNm\">"+(p.icon?("<span class=\"pEm\">"+p.icon+"</span> "):"")+esc(p.name)+"</div>"+
       "<div class=\"pPr\">"+money(p.price)+"</div>"+
-      "<div class=\"pStk"+stkCls+"\">"+T("Stock: ","Kayd: ")+p.stock+"</div>"+
     "</div>";
   }).join("");
+}
+// A stable, readable color per category — gives the grid a colorful, menu-like
+// feel while keeping every category one consistent colour.
+function _catColor(cat){
+  var pal=["#1a6ef5","#0091ae","#2e9e63","#e0842b","#e0503f","#6554c0","#c2185b","#00897b","#7e57c2","#3949ab","#d81b60","#00838f"];
+  var s=(cat||"x")+"";var n=5;for(var i=0;i<s.length;i++)n=(n*33+s.charCodeAt(i))>>>0;
+  return pal[n%pal.length];
 }
 function addToCart(pid){
   var p=PRODUCTS.find(function(x){return x.id===pid;});if(!p||p.stock<=0)return;
@@ -815,19 +834,29 @@ function _refreshCart(){
   var ct=$("cartCt");if(ct)ct.textContent="("+CART.length+")";
   var sum=document.querySelector(".posSum");
   if(sum)sum.outerHTML=_renderCartSummary();
+  // Keep the tile quantity badges in sync (preserve scroll so it doesn't jump).
+  var pg=$("prodGrid");if(pg){var st=pg.scrollTop;pg.innerHTML=_renderProductCards();pg.scrollTop=st;}
 }
 function _renderCart(){
   if(!CART.length)return "<div class=\"empty\"><div class=\"emIc\">&#128722;</div>"+T("Cart is empty","Selledu waa madhantahay")+"</div>";
-  return CART.map(function(c){
-    return "<div class=\"cartRow\">"+
-      "<div style=\"flex:1;min-width:0\"><div class=\"cNm\">"+esc(c.name)+"</div><div class=\"cPr\">"+money(c.price)+" × "+c.qty+"</div></div>"+
-      "<button class=\"qtyBtn\" onclick=\"changeQty('"+c.id+"',-1)\">-</button>"+
-      "<span class=\"qtyVal\">"+c.qty+"</span>"+
-      "<button class=\"qtyBtn\" onclick=\"changeQty('"+c.id+"',1)\">+</button>"+
-      "<div class=\"cartTot\">"+money(c.price*c.qty)+"</div>"+
-      "<button class=\"cartRm\" onclick=\"removeFromCart('"+c.id+"')\">&#128465;</button>"+
-    "</div>";
-  }).join("");
+  // Receipt table: Product · Qty (with −/+) · Unit price · Line total · remove.
+  var h="<table class=\"cartTbl\"><thead><tr>"+
+    "<th>"+T("Product","Alaabta")+"</th>"+
+    "<th class=\"c\">"+T("Qty","Tirada")+"</th>"+
+    "<th class=\"r\">"+T("Price","Qiimo")+"</th>"+
+    "<th class=\"r\">"+T("Total","Wadar")+"</th>"+
+    "<th></th></tr></thead><tbody>";
+  CART.forEach(function(c){
+    h+="<tr>"+
+      "<td class=\"ctNm\">"+esc(c.name)+"</td>"+
+      "<td class=\"ctQ\"><button class=\"qtyBtn\" onclick=\"changeQty('"+c.id+"',-1)\">&minus;</button><span class=\"qtyVal\">"+c.qty+"</span><button class=\"qtyBtn\" onclick=\"changeQty('"+c.id+"',1)\">+</button></td>"+
+      "<td class=\"r ctP\">"+money(c.price)+"</td>"+
+      "<td class=\"r ctT\">"+money(c.price*c.qty)+"</td>"+
+      "<td class=\"r\"><button class=\"cartRm\" onclick=\"removeFromCart('"+c.id+"')\">&#128465;</button></td>"+
+    "</tr>";
+  });
+  h+="</tbody></table>";
+  return h;
 }
 function _cartTotals(){
   var sub=CART.reduce(function(a,c){return a+c.price*c.qty;},0);
@@ -1033,6 +1062,7 @@ function _receiptText(sale){
   }
   if(sale.payRef)h+=line(T("Ref","Tixraac"),String(sale.payRef).slice(0,20))+"\n";
   h+="\n"+center(T("Thank you!","Mahadsanid!"))+"\n";
+  h+=center("Powered by MareegTech Solutions")+"\n";
   return h;
 }
 function _showReceipt(sale){

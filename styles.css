@@ -62,6 +62,16 @@ a{color:#1a6ef5;text-decoration:none}
 .tbBtn.on{background:#1a6ef5;color:#fff;border-color:#1a6ef5}
 .PA{flex:1;overflow-y:auto;padding:18px}
 
+/* Full-screen POS ("posmode"): the sidebar collapses to an overlay and the
+   topbar menu button appears, so the till uses the whole screen like Vektori.
+   Applies at ALL widths (not just phones) while on the POS page. */
+#AP.posmode .SB{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%);width:260px;box-shadow:0 0 34px rgba(0,0,0,.45)}
+#AP.posmode .SB.open{transform:translateX(0)}
+#AP.posmode .tbMenu{display:block}
+#AP.posmode .sbOverlay{display:none}
+#AP.posmode .sbOverlay.open{display:block}
+#AP.posmode .PA{padding:12px}
+
 /* ═══ COMPONENTS ═══════════════════════════════════════════════ */
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
 .phT{font-size:20px;font-weight:800;color:#0a1628;margin-bottom:2px}
@@ -122,29 +132,28 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 .MF{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 
 /* ═══ POS TERMINAL ═════════════════════════════════════════════ */
-.posWrap{display:grid;grid-template-columns:1fr 360px;gap:14px;height:calc(100vh - 90px)}
-.posLeft{display:flex;flex-direction:column;gap:11px;overflow:hidden}
+.posWrap{display:grid;grid-template-columns:1fr 360px;gap:0;height:calc(100vh - 90px)}
+.posLeft{display:flex;flex-direction:column;gap:11px;overflow:hidden;padding-right:14px}
 .posSearch{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:11px;background:#fff;border:1px solid #d8e0ea;border-radius:10px;box-shadow:0 1px 2px rgba(10,22,40,.04)}
 .posSearch input{flex:1;min-width:160px}
 /* Bigger tap target + darker label so categories are readable at a glance */
-.catChip{padding:7px 13px;border-radius:16px;background:#eaeef4;color:#33415c;border:1.5px solid #dbe2ec;cursor:pointer;font-size:11.5px;font-weight:700;white-space:nowrap}
-.catChip:hover{background:#dde5f0;border-color:#c5d9f6}
-.catChip.on{background:#1a6ef5;color:#fff;border-color:#1a6ef5;box-shadow:0 2px 6px rgba(26,110,245,.3)}
-.prodGrid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;padding-right:4px}
-/* Product tiles: soft blue tint instead of flat white, so they read as tappable
-   buttons against the page and every line stays high-contrast. */
-.prodC{background:linear-gradient(180deg,#f8fbff 0%,#e8f1ff 100%);border:1.5px solid #c5d9f6;border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(10,22,40,.05)}
-.prodC:hover{border-color:#1a6ef5;background:linear-gradient(180deg,#ffffff 0%,#dbe9ff 100%);box-shadow:0 6px 14px rgba(26,110,245,.20);transform:translateY(-2px)}
-.prodC:active{transform:translateY(0);box-shadow:0 2px 6px rgba(26,110,245,.18)}
-.prodC .pIc{font-size:30px;text-align:center;margin-bottom:2px;line-height:1.1}
-.prodC .pNm{font-size:12.5px;font-weight:800;color:#0a1628;line-height:1.3}
-.prodC .pCt{font-size:9.5px;color:#5c6b82;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
-.prodC .pPr{font-size:15px;font-weight:800;color:#1152cc;margin-top:auto;letter-spacing:-.01em}
-.prodC .pStk{font-size:10.5px;color:#1a7a4f;font-weight:800}
-.prodC .pStk.low{color:#c62f16}
-.prodC.out{opacity:.5;cursor:not-allowed;background:#eef1f5;border-color:#d7dde6}
+.catChip{padding:9px 17px;border-radius:12px;background:#fff;color:var(--cc,#33415c);border:2px solid var(--cc,#dbe2ec);cursor:pointer;font-size:13px;font-weight:800;white-space:nowrap;transition:all .12s}
+.catChip:hover{filter:brightness(.97)}
+.catChip.on{background:var(--cc,#1a6ef5);color:#fff;box-shadow:0 3px 8px rgba(10,22,40,.22)}
+/* Compact colored tiles (POS look): denser grid, colored by category, white
+   text — many products visible at once on a tablet. */
+.prodGrid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding-right:4px;align-content:start}
+.prodC{position:relative;background:var(--pc,#1a6ef5);border:none;border-radius:12px;padding:9px 10px;min-height:72px;cursor:pointer;transition:transform .1s,box-shadow .15s;display:flex;flex-direction:column;justify-content:space-between;gap:4px;color:#fff;box-shadow:0 1px 3px rgba(10,22,40,.18);overflow:hidden}
+.prodC:hover{box-shadow:0 7px 16px rgba(10,22,40,.30);transform:translateY(-2px)}
+.prodC:active{transform:translateY(0)}
+.prodC .pNm{font-size:12.5px;font-weight:700;color:#fff;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prodC .pEm{font-size:13px}
+.prodC .pPr{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.01em;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+.prodC .pQty{position:absolute;top:0;right:0;background:rgba(0,0,0,.42);color:#fff;font-size:11px;font-weight:800;min-width:22px;text-align:center;padding:2px 6px;border-radius:0 12px 0 11px}
+.prodC .pLow{position:absolute;top:6px;left:7px;background:rgba(0,0,0,.32);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:20px}
+.prodC.out{opacity:.4;cursor:not-allowed;filter:grayscale(.5)}
 
-.posRight{background:#fff;border:1px solid #e3e6eb;border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.posRight{background:#fff;border:none;border-left:1px solid #e6eaf0;border-radius:0;display:flex;flex-direction:column;overflow:hidden}
 .posCartH{padding:13px 16px;background:#0a1628;color:#fff;display:flex;align-items:center;justify-content:space-between}
 .posCartH .ttl{font-size:13px;font-weight:700}
 .posCartH .clr{background:rgba(255,255,255,.1);border:none;color:#fff;padding:4px 9px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:600}
@@ -159,6 +168,19 @@ label{display:block;font-size:11px;font-weight:700;color:#0a1628;margin-bottom:4
 .qtyVal{min-width:24px;text-align:center;font-weight:700;font-size:12px}
 .cartTot{font-size:13px;font-weight:800;color:#1a6ef5;text-align:right;min-width:60px}
 .cartRm{background:none;border:none;color:#bf2600;font-size:14px;cursor:pointer}
+/* Receipt table (Vektori-style): Product · Qty · Unit price · Line total */
+.cartTbl{width:100%;border-collapse:collapse;font-size:13px}
+.cartTbl thead th{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#8a93a3;font-weight:800;text-align:left;padding:7px 5px;border-bottom:1.5px solid #e6eaf0;position:sticky;top:0;background:#fff;z-index:1}
+.cartTbl th.c{text-align:center}.cartTbl th.r{text-align:right}
+.cartTbl td{padding:8px 5px;border-bottom:1px solid #f0f2f6;vertical-align:middle}
+.cartTbl td.r{text-align:right}
+.cartTbl .ctNm{font-weight:700;color:#0a1628;line-height:1.25}
+.cartTbl .ctP{color:#5c6b82;white-space:nowrap}
+.cartTbl .ctT{font-weight:800;color:#1152cc;white-space:nowrap}
+.cartTbl .ctQ{white-space:nowrap;text-align:center}
+.cartTbl .ctQ .qtyBtn{display:inline-flex;vertical-align:middle}
+.cartTbl .ctQ .qtyVal{display:inline-block;vertical-align:middle;margin:0 2px;min-width:18px}
+.cartTbl .cartRm{opacity:.55}.cartTbl .cartRm:hover{opacity:1}
 .posSum{padding:12px 16px;background:#f2f6fc;border-top:1px solid #dbe4f0}
 .sumRow{display:flex;justify-content:space-between;font-size:12.5px;color:#44536b;font-weight:600;margin-bottom:5px}
 .sumRow.tot{font-size:16px;font-weight:800;color:#0a1628;margin-top:8px;padding-top:8px;border-top:1px solid #e3e6eb}
@@ -358,6 +380,11 @@ table.invT td.nm{font-weight:700}
 .lp-lang{display:flex;justify-content:center;gap:0;margin:14px auto 0;border:1px solid #e2e8f2;border-radius:999px;padding:3px;width:fit-content}
 .lp-lang-b{background:transparent;border:none;padding:6px 18px;border-radius:999px;font-size:13px;font-weight:700;color:#5c6a80;cursor:pointer;font-family:inherit;transition:all .12s}
 .lp-lang-b.on{background:#1a6ef5;color:#fff}
+
+/* MareegTech branding footer on the login card */
+.lp-foot{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;font-size:12px;color:#8a93a3;font-weight:600}
+.lp-foot b{color:#1a6ef5}
+.mtMark{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:radial-gradient(120% 120% at 30% 20%,#12233d,#0a1628)}
 
 .pinDots{display:flex;justify-content:center;gap:11px;margin:14px 0 16px}
 .pinDots .pd{width:13px;height:13px;border-radius:50%;border:2px solid #c5d0de;background:transparent}
