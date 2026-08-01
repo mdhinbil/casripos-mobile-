@@ -13,13 +13,13 @@ class CloudSection extends StatefulWidget {
 
 class _CloudSectionState extends State<CloudSection> {
   bool _busy = false;
-  Workspace? _ws;
 
   @override
   void initState() {
     super.initState();
     cloud.addListener(_onCloud);
-    _refreshWorkspace();
+    // Pull the latest approval state; cloud notifies listeners when it lands.
+    cloud.refreshWorkspace();
   }
 
   @override
@@ -30,15 +30,6 @@ class _CloudSectionState extends State<CloudSection> {
 
   void _onCloud() {
     if (mounted) setState(() {});
-  }
-
-  Future<void> _refreshWorkspace() async {
-    if (cloud.on && !cloud.master) {
-      try {
-        final ws = await cloud.workspaceStatus();
-        if (mounted) setState(() => _ws = ws);
-      } catch (_) {}
-    }
   }
 
   void _say(String m) {
@@ -83,13 +74,13 @@ class _CloudSectionState extends State<CloudSection> {
       }
 
       // Register the workspace for approval if it isn't already.
-      _ws = await cloud.workspaceStatus();
-      if (_ws == null && mounted) {
+      await cloud.refreshWorkspace();
+      if (!cloud.wsRegistered && mounted) {
         final reg = await _askRegister();
         if (reg != null) {
           await cloud.registerWorkspace(reg.name, reg.plan);
           store.planId = reg.plan;
-          _ws = await cloud.workspaceStatus();
+          await cloud.refreshWorkspace();
           _say('Workspace submitted for approval');
         }
       }
@@ -117,7 +108,7 @@ class _CloudSectionState extends State<CloudSection> {
   Future<void> _unlink() async {
     await cloud.signOut();
     if (!mounted) return;
-    setState(() => _ws = null);
+    setState(() {});
   }
 
   // ── dialogs ─────────────────────────────────────────────────────────────────
@@ -316,8 +307,8 @@ class _CloudSectionState extends State<CloudSection> {
     }
 
     // Client account.
-    final approved = _ws?.approved ?? false;
-    final pending = _ws != null && !approved;
+    final approved = cloud.wsApproved;
+    final pending = cloud.wsRegistered && !approved;
     return Card(
       child: Column(
         children: [
@@ -327,7 +318,7 @@ class _CloudSectionState extends State<CloudSection> {
                 child: Icon(approved ? Icons.cloud_done : Icons.hourglass_top,
                     color: Colors.white)),
             title: Text(
-                (_ws?.name.isNotEmpty ?? false) ? _ws!.name : cloud.email,
+                cloud.wsName.isNotEmpty ? cloud.wsName : cloud.email,
                 style: const TextStyle(fontWeight: FontWeight.w800)),
             subtitle: Text(cloud.email),
           ),
@@ -342,11 +333,11 @@ class _CloudSectionState extends State<CloudSection> {
                 style: TextStyle(fontSize: 12.5, color: Color(0xFF8A5A00)),
               ),
             ),
-          if (_ws?.plan.isNotEmpty == true)
+          if (cloud.wsPlan.isNotEmpty)
             ListTile(
               dense: true,
               leading: const Icon(Icons.workspace_premium_outlined, size: 20),
-              title: Text('Plan: ${_ws!.plan}'),
+              title: Text('Plan: ${cloud.wsPlan}'),
             ),
           const Divider(height: 1),
           ListTile(

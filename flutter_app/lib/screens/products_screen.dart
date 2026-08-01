@@ -188,6 +188,14 @@ class _ProductSheetState extends State<_ProductSheet> {
   void _save() {
     final name = _n.text.trim();
     if (name.isEmpty) return;
+    // Enforce the workspace plan's product cap on NEW products only.
+    if (widget.existing == null && store.productCapReached) {
+      final pl = store.plan!;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Your ${pl.id} plan allows ${pl.maxProducts} products. '
+              'Remove one or upgrade your plan.')));
+      return;
+    }
     final price = double.tryParse(_p.text.trim()) ?? 0;
     final stock = int.tryParse(_s.text.trim()) ?? 0;
     final icon = _i.text.trim().isEmpty ? '📦' : _i.text.trim();

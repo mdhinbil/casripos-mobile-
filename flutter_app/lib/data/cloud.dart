@@ -80,6 +80,18 @@ class Cloud extends ChangeNotifier {
   int lastSync = 0;
   String lastError = '';
 
+  // Cached workspace approval, persisted so an offline device still gates the
+  // till correctly (a pending client stays blocked; an approved one stays in).
+  bool wsRegistered = false;
+  bool wsApproved = false;
+  String wsName = '';
+  String wsPlan = '';
+
+  /// The till is blocked while a signed-in client's workspace is registered but
+  /// not yet approved by MareegTech. Never blocks the master or a shop that
+  /// hasn't linked to the cloud at all.
+  bool get tillBlocked => on && !master && wsRegistered && !wsApproved;
+
   // 'off' | 'sync' | 'ok' | 'err'
   String status = 'off';
 
@@ -105,6 +117,10 @@ class Cloud extends ChangeNotifier {
         uid = (s['uid'] ?? '').toString();
         _refreshToken = (s['refreshToken'] ?? '').toString();
         lastSync = (s['lastSync'] as num?)?.toInt() ?? 0;
+        wsRegistered = s['wsRegistered'] == true;
+        wsApproved = s['wsApproved'] == true;
+        wsName = (s['wsName'] ?? '').toString();
+        wsPlan = (s['wsPlan'] ?? '').toString();
       }
     } catch (_) {}
   }
@@ -118,6 +134,10 @@ class Cloud extends ChangeNotifier {
           'uid': uid,
           'refreshToken': _refreshToken,
           'lastSync': lastSync,
+          'wsRegistered': wsRegistered,
+          'wsApproved': wsApproved,
+          'wsName': wsName,
+          'wsPlan': wsPlan,
         }));
   }
 
@@ -355,6 +375,10 @@ class Cloud extends ChangeNotifier {
     _refreshToken = '';
     uid = '';
     email = '';
+    wsRegistered = false;
+    wsApproved = false;
+    wsName = '';
+    wsPlan = '';
     _pending.clear();
     await _save();
     _paint('off');
@@ -387,6 +411,28 @@ class Cloud extends ChangeNotifier {
         },
         body: body);
     if (r.statusCode >= 400) throw CloudError(_httpErr(r));
+  }
+
+  /// Refresh the cached approval state from the registry (client accounts only).
+  /// Also mirrors the plan into the local `pos_plan` key so the product cap
+  /// follows the workspace across devices. Keeps last-known values on failure.
+  Future<void> refreshWorkspace() async {
+    if (!on || master) return;
+    try {
+      final ws = await workspaceStatus();
+      wsRegistered = ws != null;
+      wsApproved = ws?.approved ?? false;
+      wsName = ws?.name ?? '';
+      wsPlan = ws?.plan ?? '';
+      if (wsPlan.isNotEmpty) {
+        _sp ??= await SharedPreferences.getInstance();
+        await _sp!.setString('pos_plan', wsPlan);
+      }
+      await _save();
+      notifyListeners();
+    } catch (_) {
+      // Offline or transient — keep the persisted values.
+    }
   }
 
   /// This account's approval status.
@@ -461,7 +507,9 @@ class Cloud extends ChangeNotifier {
     _paint('sync');
     try {
       await _freshToken();
-      return await pull(force: false);
+      final n = await pull(force: false);
+      await refreshWorkspace();
+      return n;
     } catch (e) {
       lastError = errText(e);
       _paint('err');

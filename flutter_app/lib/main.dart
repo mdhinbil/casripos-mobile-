@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'data/store.dart';
+import 'data/cloud.dart';
 import 'screens/login_screen.dart';
+import 'screens/pending_screen.dart';
 import 'screens/pos_screen.dart';
 import 'screens/products_screen.dart';
 import 'screens/sales_screen.dart';
@@ -89,19 +91,27 @@ class _RootGateState extends State<RootGate> {
   void initState() {
     super.initState();
     store.addListener(_onChange);
+    // The till gate depends on cloud approval state too, so rebuild on both.
+    cloud.addListener(_onChange);
   }
 
   @override
   void dispose() {
     store.removeListener(_onChange);
+    cloud.removeListener(_onChange);
     super.dispose();
   }
 
-  void _onChange() => setState(() {});
+  void _onChange() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
-    return store.user == null ? const LoginScreen() : const HomeShell();
+    if (store.user == null) return const LoginScreen();
+    // A client whose workspace is registered but not yet approved can't sell.
+    if (cloud.tillBlocked) return const PendingApprovalScreen();
+    return const HomeShell();
   }
 }
 
