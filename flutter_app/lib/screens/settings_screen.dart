@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../main.dart';
+import '../data/cloud.dart';
 import 'cloud_section.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -170,7 +171,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('Sign out',
                   style: TextStyle(
                       fontWeight: FontWeight.w700, color: Color(0xFFD63B3B))),
-              onTap: () => store.signOut(),
+              onTap: () async {
+                store.signOut(); // local first, then cloud (no screen flash)
+                await cloud.signOut();
+              },
             ),
           ),
           const SizedBox(height: 18),

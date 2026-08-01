@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../data/cloud.dart';
 
+/// The front door. A workspace (cloud) account is the primary sign-in — the same
+/// account the web app uses — so a shop's data and approval follow it here. A
+/// "Staff" tab keeps the local username/password path for cashiers and for shops
+/// that run fully offline.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -8,25 +13,188 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _u = TextEditingController();
-  final _p = TextEditingController();
-  bool _err = false, _hide = true;
+  bool _workspace = true; // which tab
+  bool _isNew = false; // create-account toggle
+  bool _hide = true;
+  bool _busy = false;
+  String _err = '';
+
+  final _email = TextEditingController();
+  final _wpass = TextEditingController();
+  final _user = TextEditingController();
+  final _pass = TextEditingController();
 
   @override
-  void dispose() { _u.dispose(); _p.dispose(); super.dispose(); }
-
-  void _go() {
-    if (!store.signIn(_u.text, _p.text)) setState(() => _err = true);
+  void dispose() {
+    for (final c in [_email, _wpass, _user, _pass]) {
+      c.dispose();
+    }
+    super.dispose();
   }
 
+  // ── workspace (cloud) sign-in ───────────────────────────────────────────────
+  Future<void> _cloudGo() async {
+    final email = _email.text.trim();
+    final pw = _wpass.text;
+    if (email.isEmpty || pw.isEmpty) {
+      setState(() => _err = 'Enter email and password');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _err = '';
+    });
+    try {
+      final remote = await cloud.signIn(email, pw, isNew: _isNew);
+      final local = await cloud.localInfo();
+
+      // The master account manages workspaces; no till, no data direction.
+      if (cloud.master) {
+        store.openAsOwner('MareegTech');
+        return; // finally clears _busy; RootGate shows the console
+      }
+
+      // Decide which side's data to keep.
+      if (remote.has && (local.products > 0 || local.sales > 0)) {
+        if (!mounted) return;
+        final keep = await _askDirection(local, remote);
+        if (keep == null) {
+          // Cancelled — don't leave a half-signed-in state.
+          await cloud.signOut();
+          return;
+        }
+        if (keep == 'cloud') {
+          await store.adoptCloudData();
+        } else {
+          await store.uploadLocalData();
+        }
+      } else if (remote.has) {
+        await store.adoptCloudData();
+      } else {
+        await store.uploadLocalData();
+      }
+
+      // Register the workspace for approval if it isn't already.
+      await cloud.refreshWorkspace();
+      if (!cloud.wsRegistered) {
+        if (!mounted) return;
+        final reg = await _askRegister();
+        if (reg != null) {
+          await cloud.registerWorkspace(reg.$1, reg.$2);
+          store.planId = reg.$2;
+          await cloud.refreshWorkspace();
+        }
+      }
+
+      // Open the session — RootGate routes to the till or the pending screen.
+      store.openAsOwner(cloud.wsName.isNotEmpty ? cloud.wsName : email);
+    } catch (e) {
+      if (mounted) setState(() => _err = Cloud.errText(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _staffGo() {
+    if (!store.signIn(_user.text, _pass.text)) {
+      setState(() => _err = 'Wrong username or password');
+    }
+  }
+
+  Future<String?> _askDirection(SyncInfo local, SyncInfo remote) {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Which data to keep?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('The cloud has ${remote.products} products, ${remote.sales} '
+                'sales.\nThis device has ${local.products} products, '
+                '${local.sales} sales.'),
+            const SizedBox(height: 8),
+            const Text('Pick one — the other is replaced.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF6B7688))),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, 'local'),
+              child: const Text('Keep this device')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'cloud'),
+              child: const Text('Use cloud')),
+        ],
+      ),
+    );
+  }
+
+  Future<(String, String)?> _askRegister() {
+    final nameC = TextEditingController(text: store.biz.name);
+    var planId = 'MPQ50';
+    return showDialog<(String, String)>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('Register workspace'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameC,
+                decoration: const InputDecoration(labelText: 'Workspace name'),
+              ),
+              const SizedBox(height: 12),
+              const Text('Plan',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6B7688))),
+              ...plans.values.map((pl) => RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(pl.label, style: const TextStyle(fontSize: 13)),
+                    value: pl.id,
+                    groupValue: planId,
+                    onChanged: (v) => setD(() => planId = v ?? planId),
+                  )),
+              const Text(
+                  'MareegTech approves new workspaces before they go live.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Later')),
+            FilledButton(
+              onPressed: () {
+                if (nameC.text.trim().isEmpty) return;
+                Navigator.pop(ctx, (nameC.text.trim(), planId));
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── UI ──────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [kNavy, Color(0xFF1A4DC4)]),
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [kNavy, Color(0xFF1A4DC4)]),
         ),
         child: Center(
           child: SingleChildScrollView(
@@ -35,63 +203,50 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 400),
               child: Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(26),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 62, height: 62,
+                        width: 60,
+                        height: 60,
                         decoration: BoxDecoration(
-                          color: kBlue, borderRadius: BorderRadius.circular(15)),
+                            color: kBlue,
+                            borderRadius: BorderRadius.circular(15)),
                         child: const Icon(Icons.shopping_cart,
                             color: Colors.white, size: 30),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       const Text('Casri POS',
                           style: TextStyle(
-                              fontSize: 23, fontWeight: FontWeight.w800, color: kNavy)),
+                              fontSize: 23,
+                              fontWeight: FontWeight.w800,
+                              color: kNavy)),
                       const Text('Point of Sale System',
-                          style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7688))),
-                      const SizedBox(height: 20),
-                      if (_err)
+                          style: TextStyle(
+                              fontSize: 12.5, color: Color(0xFF6B7688))),
+                      const SizedBox(height: 18),
+                      _tabs(),
+                      const SizedBox(height: 16),
+                      if (_err.isNotEmpty)
                         Container(
                           width: double.infinity,
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(11),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFEAEA),
-                            border: Border.all(color: const Color(0xFFFFB3B3)),
-                            borderRadius: BorderRadius.circular(9)),
-                          child: const Text('Wrong username or password',
-                              style: TextStyle(color: Color(0xFFBF2600), fontSize: 12.5)),
+                              color: const Color(0xFFFFEAEA),
+                              border:
+                                  Border.all(color: const Color(0xFFFFB3B3)),
+                              borderRadius: BorderRadius.circular(9)),
+                          child: Text(_err,
+                              style: const TextStyle(
+                                  color: Color(0xFFBF2600), fontSize: 12.5)),
                         ),
-                      TextField(
-                        controller: _u,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
-                      ),
-                      const SizedBox(height: 11),
-                      TextField(
-                        controller: _p,
-                        obscureText: _hide,
-                        onSubmitted: (_) => _go(),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(_hide ? Icons.visibility_off : Icons.visibility),
-                            onPressed: () => setState(() => _hide = !_hide)),
-                        ),
-                      ),
+                      _workspace ? _workspaceForm() : _staffForm(),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(onPressed: _go, child: const Text('Sign in')),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text('Demo:  admin / admin123',
-                          style: TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+                      const Text('Powered by MareegTech Solutions',
+                          style: TextStyle(
+                              fontSize: 11, color: Color(0xFF98A2B3))),
                     ],
                   ),
                 ),
@@ -100,6 +255,127 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _tabs() {
+    Widget tab(String label, bool ws) {
+      final on = _workspace == ws;
+      return Expanded(
+        child: GestureDetector(
+          onTap: _busy
+              ? null
+              : () => setState(() {
+                    _workspace = ws;
+                    _err = '';
+                  }),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: on ? kBlue : Colors.transparent,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text(label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: on ? Colors.white : const Color(0xFF6B7688))),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+          color: const Color(0xFFEEF1F5),
+          borderRadius: BorderRadius.circular(11)),
+      child: Row(children: [tab('Workspace', true), tab('Staff', false)]),
+    );
+  }
+
+  Widget _workspaceForm() {
+    return Column(
+      children: [
+        TextField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+              labelText: 'Workspace email',
+              prefixIcon: Icon(Icons.alternate_email)),
+        ),
+        const SizedBox(height: 11),
+        TextField(
+          controller: _wpass,
+          obscureText: _hide,
+          onSubmitted: (_) => _busy ? null : _cloudGo(),
+          decoration: InputDecoration(
+            labelText: 'Password',
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+                icon: Icon(_hide ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => _hide = !_hide)),
+          ),
+        ),
+        const SizedBox(height: 6),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          title: const Text('Create a new workspace account',
+              style: TextStyle(fontSize: 13)),
+          value: _isNew,
+          onChanged: _busy ? null : (v) => setState(() => _isNew = v),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _busy ? null : _cloudGo,
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : Text(_isNew ? 'Create & continue' : 'Sign in'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _staffForm() {
+    return Column(
+      children: [
+        TextField(
+          controller: _user,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(
+              labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
+        ),
+        const SizedBox(height: 11),
+        TextField(
+          controller: _pass,
+          obscureText: _hide,
+          onSubmitted: (_) => _staffGo(),
+          decoration: InputDecoration(
+            labelText: 'Password',
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+                icon: Icon(_hide ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => _hide = !_hide)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(onPressed: _staffGo, child: const Text('Sign in')),
+        ),
+        const SizedBox(height: 12),
+        const Text('Demo:  admin / admin123',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+      ],
     );
   }
 }

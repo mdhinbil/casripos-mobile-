@@ -66,6 +66,13 @@ class Store extends ChangeNotifier {
     try {
       final applied = await cloud.boot();
       if (applied > 0) _readAll();
+      // A persisted cloud session is the front-door login — open straight into
+      // the app (RootGate then routes master → console, pending → wait screen).
+      if (cloud.on) {
+        openAsOwner(cloud.master
+            ? 'MareegTech'
+            : (cloud.wsName.isNotEmpty ? cloud.wsName : cloud.email));
+      }
     } catch (_) {}
     if (businesses.isEmpty) {
       businesses = [Business(id: 'b1', name: 'Casri POS')];
@@ -235,6 +242,19 @@ class Store extends ChangeNotifier {
       }
     }
     return false;
+  }
+
+  /// Opens an owner/admin session after a cloud workspace sign-in (the front-
+  /// door login), where there is no local staff account to match against.
+  void openAsOwner(String displayName) {
+    user = Account(
+      id: 'owner',
+      name: displayName.trim().isEmpty ? 'Owner' : displayName.trim(),
+      username: 'owner',
+      password: '',
+      role: 'admin',
+    );
+    notifyListeners();
   }
 
   void signOut() {

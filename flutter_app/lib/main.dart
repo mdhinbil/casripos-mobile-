@@ -7,6 +7,7 @@ import 'screens/pos_screen.dart';
 import 'screens/products_screen.dart';
 import 'screens/sales_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/workspaces_admin_screen.dart';
 
 final store = Store();
 
@@ -109,6 +110,10 @@ class _RootGateState extends State<RootGate> {
   @override
   Widget build(BuildContext context) {
     if (store.user == null) return const LoginScreen();
+    // The MareegTech master account manages workspaces instead of selling.
+    if (cloud.master) {
+      return const WorkspacesAdminScreen(isHome: true);
+    }
     // A client whose workspace is registered but not yet approved can't sell.
     if (cloud.tillBlocked) return const PendingApprovalScreen();
     return const HomeShell();

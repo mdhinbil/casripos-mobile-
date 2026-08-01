@@ -33,8 +33,8 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   }
 
   Future<void> _switchAccount() async {
+    store.signOut(); // clear local session first (no till flash)
     await cloud.signOut();
-    store.signOut();
   }
 
   @override

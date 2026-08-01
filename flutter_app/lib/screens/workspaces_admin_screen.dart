@@ -5,7 +5,10 @@ import '../data/cloud.dart';
 /// MareegTech super-admin console: list every client workspace and approve or
 /// revoke it. Only reachable when signed in as the master cloud account.
 class WorkspacesAdminScreen extends StatefulWidget {
-  const WorkspacesAdminScreen({super.key});
+  /// When true this is the master's home (front-door login), so it shows a
+  /// sign-out instead of a back button.
+  final bool isHome;
+  const WorkspacesAdminScreen({super.key, this.isHome = false});
   @override
   State<WorkspacesAdminScreen> createState() => _WorkspacesAdminScreenState();
 }
@@ -68,10 +71,20 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Workspaces'),
+        automaticallyImplyLeading: !widget.isHome,
         actions: [
           IconButton(
               onPressed: _loading ? null : _load,
               icon: const Icon(Icons.refresh)),
+          if (widget.isHome)
+            IconButton(
+              tooltip: 'Sign out',
+              onPressed: () async {
+                store.signOut(); // clear local session first (no till flash)
+                await cloud.signOut();
+              },
+              icon: const Icon(Icons.logout),
+            ),
         ],
       ),
       body: _loading
