@@ -35,8 +35,13 @@ requirements = python3,kivy==2.3.0,android
 p4a.fork = kivy
 p4a.branch = v2024.01.21
 
-orientation     = sensor
+orientation     = portrait
 fullscreen      = 0
+# The real rotation behaviour: android:screenOrientation="sensor" lets the app
+# fill the whole screen in BOTH landscape and portrait, following the device.
+# (p4a's `orientation` only accepts portrait/landscape; this manifest override
+# is where sensor/fullSensor/etc. belong.)
+android.manifest.orientation = sensor
 
 # ── App icon & presplash (flat navy → suppresses Kivy "Loading..." splash) ──
 icon.filename           = %(source.dir)s/assets/icon.png
