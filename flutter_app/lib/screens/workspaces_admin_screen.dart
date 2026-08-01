@@ -70,7 +70,7 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
     final pending = _rows.where((w) => !w.approved).length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Workspaces'),
+        title: const Text('Businesses'),
         automaticallyImplyLeading: !widget.isHome,
         actions: [
           IconButton(
@@ -93,7 +93,7 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
               ? _ErrorView(message: _error, onRetry: _load)
               : _rows.isEmpty
                   ? const Center(
-                      child: Text('No workspaces yet',
+                      child: Text('No businesses yet',
                           style: TextStyle(color: Color(0xFF6B7688))))
                   : Column(
                       children: [

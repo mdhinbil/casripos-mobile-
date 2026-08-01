@@ -78,10 +78,11 @@ class _CloudSectionState extends State<CloudSection> {
       if (!cloud.wsRegistered && mounted) {
         final reg = await _askRegister();
         if (reg != null) {
+          store.applyBusinessProfile(reg.name, reg.industry);
           await cloud.registerWorkspace(reg.name, reg.plan);
           store.planId = reg.plan;
           await cloud.refreshWorkspace();
-          _say('Workspace submitted for approval');
+          _say('Business submitted for approval');
         }
       }
     } catch (e) {
@@ -120,7 +121,7 @@ class _CloudSectionState extends State<CloudSection> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: Text(isNew ? 'Create workspace account' : 'Link to cloud'),
+          title: Text(isNew ? 'Create business account' : 'Link to cloud'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -198,38 +199,62 @@ class _CloudSectionState extends State<CloudSection> {
   Future<_Reg?> _askRegister() {
     final nameC = TextEditingController(text: store.biz.name);
     var planId = 'MPQ50';
+    var industry = store.biz.type.isNotEmpty ? store.biz.type : 'shop';
+    if (!industries.containsKey(industry)) industry = 'shop';
     return showDialog<_Reg>(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('Register workspace'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: nameC,
-                decoration:
-                    const InputDecoration(labelText: 'Workspace name'),
-              ),
-              const SizedBox(height: 12),
-              const Text('Plan',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF6B7688))),
-              ...plans.values.map((pl) => RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(pl.label, style: const TextStyle(fontSize: 13)),
-                    value: pl.id,
-                    groupValue: planId,
-                    onChanged: (v) => setD(() => planId = v ?? planId),
-                  )),
-              const Text(
-                  'MareegTech approves new workspaces before they go live.',
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
-            ],
+          title: const Text('Register business'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameC,
+                  decoration:
+                      const InputDecoration(labelText: 'Business name'),
+                ),
+                const SizedBox(height: 14),
+                const Text('Plan',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6B7688))),
+                ...plans.values.map((pl) => RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title:
+                          Text(pl.label, style: const TextStyle(fontSize: 13)),
+                      value: pl.id,
+                      groupValue: planId,
+                      onChanged: (v) => setD(() => planId = v ?? planId),
+                    )),
+                const SizedBox(height: 8),
+                const Text('Industry',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6B7688))),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: industry,
+                  isExpanded: true,
+                  decoration: const InputDecoration(isDense: true),
+                  items: industries.entries
+                      .map((e) => DropdownMenuItem(
+                          value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) => setD(() => industry = v ?? industry),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                    'MareegTech approves new businesses before they go live.',
+                    style:
+                        TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -238,7 +263,7 @@ class _CloudSectionState extends State<CloudSection> {
             FilledButton(
               onPressed: () {
                 if (nameC.text.trim().isEmpty) return;
-                Navigator.pop(ctx, _Reg(nameC.text.trim(), planId));
+                Navigator.pop(ctx, _Reg(nameC.text.trim(), planId, industry));
               },
               child: const Text('Submit'),
             ),
@@ -259,14 +284,14 @@ class _CloudSectionState extends State<CloudSection> {
               padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
               child: Text(
                 'Link this till to the cloud to back up automatically and sync '
-                'across devices. Works with your web workspace account.',
+                'across devices. Works with your web business account.',
                 style: TextStyle(fontSize: 12.5, color: Color(0xFF5C6B82)),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.cloud_outlined, color: kBlue),
               title: const Text('Link to cloud'),
-              subtitle: const Text('Sign in or create a workspace account'),
+              subtitle: const Text('Sign in or create a business account'),
               onTap: _busy ? null : _link,
             ),
           ],
@@ -289,8 +314,8 @@ class _CloudSectionState extends State<CloudSection> {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.groups_outlined, color: kBlue),
-              title: const Text('Workspaces console'),
-              subtitle: const Text('Approve or revoke client workspaces'),
+              title: const Text('Businesses console'),
+              subtitle: const Text('Approve or revoke client businesses'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => const WorkspacesAdminScreen())),
@@ -328,7 +353,7 @@ class _CloudSectionState extends State<CloudSection> {
               color: const Color(0xFFFFF4E5),
               padding: const EdgeInsets.all(12),
               child: const Text(
-                'Pending approval — MareegTech must approve this workspace '
+                'Pending approval — MareegTech must approve this business '
                 'before it goes live. Your data is safely backed up meanwhile.',
                 style: TextStyle(fontSize: 12.5, color: Color(0xFF8A5A00)),
               ),
@@ -372,6 +397,6 @@ class _Creds {
 }
 
 class _Reg {
-  final String name, plan;
-  _Reg(this.name, this.plan);
+  final String name, plan, industry;
+  _Reg(this.name, this.plan, this.industry);
 }

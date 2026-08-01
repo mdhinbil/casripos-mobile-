@@ -80,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         final reg = await _askRegister();
         if (reg != null) {
+          store.applyBusinessProfile(reg.$1, reg.$3); // name + industry
           await cloud.registerWorkspace(reg.$1, reg.$2);
           store.planId = reg.$2;
           await cloud.refreshWorkspace();
@@ -133,40 +134,65 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<(String, String)?> _askRegister() {
+  Future<(String, String, String)?> _askRegister() {
     final nameC = TextEditingController(text: store.biz.name);
     var planId = 'MPQ50';
-    return showDialog<(String, String)>(
+    var industry = store.biz.type.isNotEmpty ? store.biz.type : 'shop';
+    if (!industries.containsKey(industry)) industry = 'shop';
+    return showDialog<(String, String, String)>(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('Register workspace'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: nameC,
-                decoration: const InputDecoration(labelText: 'Workspace name'),
-              ),
-              const SizedBox(height: 12),
-              const Text('Plan',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF6B7688))),
-              ...plans.values.map((pl) => RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(pl.label, style: const TextStyle(fontSize: 13)),
-                    value: pl.id,
-                    groupValue: planId,
-                    onChanged: (v) => setD(() => planId = v ?? planId),
-                  )),
-              const Text(
-                  'MareegTech approves new workspaces before they go live.',
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
-            ],
+          title: const Text('Register business'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameC,
+                  decoration:
+                      const InputDecoration(labelText: 'Business name'),
+                ),
+                const SizedBox(height: 14),
+                const Text('Plan',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6B7688))),
+                ...plans.values.map((pl) => RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title:
+                          Text(pl.label, style: const TextStyle(fontSize: 13)),
+                      value: pl.id,
+                      groupValue: planId,
+                      onChanged: (v) => setD(() => planId = v ?? planId),
+                    )),
+                const SizedBox(height: 8),
+                const Text('Industry',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6B7688))),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: industry,
+                  isExpanded: true,
+                  decoration: const InputDecoration(isDense: true),
+                  items: industries.entries
+                      .map((e) => DropdownMenuItem(
+                          value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) => setD(() => industry = v ?? industry),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                    'MareegTech approves new businesses before they go live.',
+                    style:
+                        TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -175,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
             FilledButton(
               onPressed: () {
                 if (nameC.text.trim().isEmpty) return;
-                Navigator.pop(ctx, (nameC.text.trim(), planId));
+                Navigator.pop(ctx, (nameC.text.trim(), planId, industry));
               },
               child: const Text('Submit'),
             ),
@@ -291,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
           color: const Color(0xFFEEF1F5),
           borderRadius: BorderRadius.circular(11)),
-      child: Row(children: [tab('Workspace', true), tab('Staff', false)]),
+      child: Row(children: [tab('Businesses', true), tab('Staff', false)]),
     );
   }
 
@@ -302,7 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _email,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
-              labelText: 'Workspace email',
+              labelText: 'Business email',
               prefixIcon: Icon(Icons.alternate_email)),
         ),
         const SizedBox(height: 11),
@@ -322,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
-          title: const Text('Create a new workspace account',
+          title: const Text('Create a new business account',
               style: TextStyle(fontSize: 13)),
           value: _isNew,
           onChanged: _busy ? null : (v) => setState(() => _isNew = v),

@@ -80,7 +80,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                             ? '“${cloud.wsName}” has been submitted. MareegTech '
                                 'will approve it shortly. You can sell once it is '
                                 'approved.'
-                            : 'Your workspace has been submitted. MareegTech will '
+                            : 'Your business has been submitted. MareegTech will '
                                 'approve it shortly.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(

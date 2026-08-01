@@ -186,6 +186,14 @@ class Store extends ChangeNotifier {
     }
   }
 
+  /// Apply the name + industry chosen at registration to the current business.
+  void applyBusinessProfile(String name, String industry) {
+    final b = biz;
+    if (name.trim().isNotEmpty) b.name = name.trim();
+    if (industry.isNotEmpty) b.type = industry;
+    saveBusinesses();
+  }
+
   // ── plan (MPQ tier) ─────────────────────────────────────────────────────────
   String get planId => _sp.getString('pos_plan') ?? '';
   Plan? get plan => plans[planId];

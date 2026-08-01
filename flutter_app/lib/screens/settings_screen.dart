@@ -130,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const _SectionLabel('Cloud & workspace'),
+          const _SectionLabel('Cloud & business'),
           const CloudSection(),
           const SizedBox(height: 14),
           const _SectionLabel('Backup & restore'),

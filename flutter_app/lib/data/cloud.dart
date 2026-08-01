@@ -44,6 +44,15 @@ const plans = <String, Plan>{
   'MPQ200': Plan('MPQ200', 'MPQ200 — 200 products, 3 registers', 200, 3),
 };
 
+/// The industries a business can pick at registration. The key is stored as
+/// Business.type (restaurant/cafe/bar take table numbers; shop does not).
+const industries = <String, String>{
+  'shop': 'Shop / Retail',
+  'restaurant': 'Restaurant',
+  'cafe': 'Cafe',
+  'bar': 'Juice / Tea Bar',
+};
+
 /// Result of inspecting either side before choosing a sync direction.
 class SyncInfo {
   final bool has;
