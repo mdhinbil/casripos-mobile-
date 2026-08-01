@@ -19,9 +19,12 @@ class Store extends ChangeNotifier {
   static const kAccounts = 'pos_acc';
   static const kFx = 'pos_fx';
   static const kRecoveryEmail = 'pos_recovery_email';
+  static const kCustomers = 'pos_customers';
+  static const kLog = 'pos_log';
 
   static const allKeys = [
-    kBiz, kCurrentBiz, kProducts, kSales, kInvoices, kAccounts, kFx, kRecoveryEmail
+    kBiz, kCurrentBiz, kProducts, kSales, kInvoices, kAccounts, kFx,
+    kRecoveryEmail, kCustomers, kLog
   ];
 
   late SharedPreferences _sp;
@@ -31,6 +34,8 @@ class Store extends ChangeNotifier {
   List<Sale> sales = [];
   List<Invoice> invoices = [];
   List<Account> accounts = [];
+  List<Customer> customers = [];
+  List<LogEntry> logs = [];
   String currentBizId = '';
   Account? user;
 
@@ -55,6 +60,8 @@ class Store extends ChangeNotifier {
   List<Sale> get bizSales => sales.where((s) => s.bizId == currentBizId).toList();
   List<Invoice> get bizInvoices =>
       invoices.where((i) => i.bizId == currentBizId).toList();
+  List<Customer> get bizCustomers =>
+      customers.where((c) => c.bizId == currentBizId).toList();
 
   Future<void> init() async {
     _sp = await SharedPreferences.getInstance();
@@ -96,6 +103,8 @@ class Store extends ChangeNotifier {
     sales = _readList(kSales).map((e) => Sale.fromJson(e)).toList();
     invoices = _readList(kInvoices).map((e) => Invoice.fromJson(e)).toList();
     accounts = _readList(kAccounts).map((e) => Account.fromJson(e)).toList();
+    customers = _readList(kCustomers).map((e) => Customer.fromJson(e)).toList();
+    logs = _readList(kLog).map((e) => LogEntry.fromJson(e)).toList();
     currentBizId = _readString(kCurrentBiz);
     if (currentBizId.isEmpty && businesses.isNotEmpty) currentBizId = businesses.first.id;
     final fx = _readMap(kFx);
@@ -253,6 +262,25 @@ class Store extends ChangeNotifier {
     notifyListeners();
   }
 
+  void saveCustomers() {
+    _write(kCustomers, customers.map((e) => e.toJson()).toList());
+    notifyListeners();
+  }
+
+  /// Append an activity-log line (kept device-local, newest first, capped).
+  void log(String msg) {
+    logs.insert(0, LogEntry(DateTime.now().millisecondsSinceEpoch, msg));
+    if (logs.length > 200) logs = logs.sublist(0, 200);
+    _write(kLog, logs.map((e) => e.toJson()).toList());
+    // No notify: logging shouldn't trigger UI rebuilds on the hot path.
+  }
+
+  void clearLog() {
+    logs = [];
+    _write(kLog, const []);
+    notifyListeners();
+  }
+
   // ── auth ──────────────────────────────────────────────────
   bool signIn(String username, String password) {
     for (final a in accounts) {
@@ -365,6 +393,8 @@ class Store extends ChangeNotifier {
     sales.insert(0, sale);
     saveProducts();
     saveSales();
+    log('Sale #${sale.id.substring(sale.id.length - 6)} · '
+        '${money(sale.total)} · $payMethod');
     clearCart();
     return sale;
   }

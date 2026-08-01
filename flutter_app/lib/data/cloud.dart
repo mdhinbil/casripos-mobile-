@@ -26,7 +26,7 @@ const kMasterEmail = 'admin@mareegtech.com';
 
 const cloudKeys = [
   'pos_biz_list', 'pos_current_biz', 'pos_prod', 'pos_sales',
-  'pos_inv', 'pos_acc', 'pos_fx', 'pos_recovery_email',
+  'pos_inv', 'pos_acc', 'pos_fx', 'pos_recovery_email', 'pos_customers',
 ];
 
 /// The MPQ plan tiers, matching the web app.

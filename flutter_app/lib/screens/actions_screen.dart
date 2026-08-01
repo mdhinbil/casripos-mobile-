@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../main.dart';
 import '../data/cloud.dart';
 import '../models/models.dart';
+import 'customers_screen.dart';
+import 'log_screen.dart';
 import 'settings_screen.dart';
 
 /// The Vektori-style Actions grid: reports, lookups, and till tools. Actions
@@ -278,8 +280,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
       _Action(t('Find order', 'Raadi dalab'), '', Icons.search,
           () => _find(true)),
       _Action(t('Search customer', 'Raadi macmiil'), '', Icons.person_search,
-          () => _say(t('Customer directory is coming soon',
-              'Diiwaanka macaamiisha ayaa dhawaan imanaya'))),
+          () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CustomersScreen()))),
       _Action(t('Barcode mode', 'Habka barcode'),
           store.barcodeMode ? t('On', 'Shid') : t('Off', 'Damiyay'),
           Icons.qr_code_scanner, () {
@@ -295,8 +297,9 @@ class _ActionsScreenState extends State<ActionsScreen> {
       }),
       _Action(t('Update products', 'Cusboonaysii alaabta'), '', Icons.sync,
           _updateProducts),
-      _Action(t('Log', 'Diiwaanka'), '', Icons.history, () => _say(
-          t('Activity log is coming soon', 'Diiwaanka dhaqdhaqaaqa dhawaan'))),
+      _Action(t('Log', 'Diiwaanka'), '', Icons.history,
+          () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LogScreen()))),
       _Action(t('Detach Payment Terminal', 'Ka fur Terminalka lacagta'),
           t('Detach / Attach', 'Fur / Xir'), Icons.link_off, () => _say(
               t('No payment terminal connected', 'Terminal lacageed ma xidhna'))),

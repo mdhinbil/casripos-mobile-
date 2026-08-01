@@ -221,6 +221,42 @@ class Account {
   bool get isSuperAdmin => role == 'admin' && bizId.isEmpty;
 }
 
+class Customer {
+  String id, bizId, name, phone, note;
+
+  Customer({
+    required this.id,
+    required this.bizId,
+    required this.name,
+    this.phone = '',
+    this.note = '',
+  });
+
+  factory Customer.fromJson(Map<String, dynamic> j) => Customer(
+        id: (j['id'] ?? '').toString(),
+        bizId: (j['bizId'] ?? '').toString(),
+        name: (j['name'] ?? '').toString(),
+        phone: (j['phone'] ?? '').toString(),
+        note: (j['note'] ?? '').toString(),
+      );
+
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'bizId': bizId, 'name': name, 'phone': phone, 'note': note};
+}
+
+class LogEntry {
+  final int ts;
+  final String msg;
+  LogEntry(this.ts, this.msg);
+
+  factory LogEntry.fromJson(Map<String, dynamic> j) =>
+      LogEntry(_int(j['ts']), (j['msg'] ?? '').toString());
+
+  Map<String, dynamic> toJson() => {'ts': ts, 'msg': msg};
+
+  DateTime get when => DateTime.fromMillisecondsSinceEpoch(ts);
+}
+
 class CartLine {
   final Product product;
   int qty;

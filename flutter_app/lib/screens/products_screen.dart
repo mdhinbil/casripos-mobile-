@@ -225,6 +225,7 @@ class _ProductSheetState extends State<_ProductSheet> {
       ));
     }
     store.saveProducts();
+    store.log('${widget.existing == null ? 'Added' : 'Edited'} product: $name');
     Navigator.pop(context, true);
   }
 
