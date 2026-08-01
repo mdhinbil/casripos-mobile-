@@ -104,8 +104,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('AMOUNT DUE',
-                              style: TextStyle(
+                          Text(t('AMOUNT DUE', 'LACAGTA LA RABO'),
+                              style: const TextStyle(
                                   fontSize: 12, letterSpacing: .6,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF44536B))),
@@ -120,17 +120,17 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                     Row(
                       children: [
                         _MethodCard(
-                          icon: Icons.payments_outlined, label: 'Cash',
+                          icon: Icons.payments_outlined, label: t('Cash', 'Cash'),
                           on: _method == 'cash',
                           onTap: () => setState(() => _method = 'cash')),
                         const SizedBox(width: 9),
                         _MethodCard(
-                          icon: Icons.credit_card, label: 'Card',
+                          icon: Icons.credit_card, label: t('Card', 'Kaadh'),
                           on: _method == 'card',
                           onTap: () => setState(() => _method = 'card')),
                         const SizedBox(width: 9),
                         _MethodCard(
-                          icon: Icons.smartphone, label: 'Mobile',
+                          icon: Icons.smartphone, label: t('Mobile', 'Mobile'),
                           on: _method == 'mobile',
                           onTap: () => setState(() => _method = 'mobile')),
                       ],
@@ -144,14 +144,15 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
                         ],
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Amount received', hintText: '0'),
+                        decoration: InputDecoration(
+                          labelText: t('Amount received', 'Lacagta la helay'),
+                          hintText: '0'),
                       ),
                       const SizedBox(height: 9),
                       Wrap(
                         spacing: 8, runSpacing: 8,
                         children: [
-                          _Quick('Exact', () => _quick(dueDisplay)),
+                          _Quick(t('Exact', 'Saax'), () => _quick(dueDisplay)),
                           // Round-ups a cashier is actually handed: next 1, 5,
                           // 10… above the amount due. Doubles throughout —
                           // ceil() returns an int and _quick wants a double.
@@ -176,7 +177,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_short ? 'STILL DUE' : 'CHANGE',
+                            Text(
+                                _short
+                                    ? t('STILL DUE', 'WELI LA RABO')
+                                    : t('CHANGE', 'BAAQI'),
                                 style: const TextStyle(
                                     fontSize: 12, letterSpacing: .5,
                                     fontWeight: FontWeight.w800,
@@ -198,7 +202,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                       if (_method == 'mobile')
                         DropdownButtonFormField<String>(
                           value: _provider,
-                          decoration: const InputDecoration(labelText: 'Provider'),
+                          decoration: InputDecoration(
+                              labelText: t('Provider', 'Bixiyaha')),
                           items: _providers
                               .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                               .toList(),
@@ -207,9 +212,11 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                       if (_method == 'mobile') const SizedBox(height: 10),
                       TextField(
                         controller: _ref,
-                        decoration: const InputDecoration(
-                          labelText: 'Reference (optional)',
-                          hintText: 'Transaction / approval no.'),
+                        decoration: InputDecoration(
+                          labelText:
+                              t('Reference (optional)', 'Tixraac (ikhtiyaari)'),
+                          hintText: t('Transaction / approval no.',
+                              'Lambarka macaamil / ansixin')),
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -218,7 +225,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                       child: FilledButton.icon(
                         onPressed: (_method == 'cash' && _short) ? null : _complete,
                         icon: const Icon(Icons.check_circle_outline),
-                        label: Text(_short ? 'Not enough' : 'Complete sale'),
+                        label: Text(_short
+                            ? t('Not enough', 'Kuma filna')
+                            : t('Complete sale', 'Dhammee iibka')),
                         style: FilledButton.styleFrom(backgroundColor: kGreen),
                       ),
                     ),
@@ -307,9 +316,12 @@ class _ReceiptDialog extends StatelessWidget {
     if (store.biz.phone.isNotEmpty) b.writeln(center(store.biz.phone));
     b.writeln();
     b.writeln('=' * w);
-    b.writeln(line('Receipt', '#${sale.id.substring(sale.id.length - 6)}'));
-    b.writeln(line('Cashier', sale.cashier));
-    if (sale.tableNo.isNotEmpty) b.writeln(line('Table', '#${sale.tableNo}'));
+    b.writeln(line(t('Receipt', 'Rasiid'),
+        '#${sale.id.substring(sale.id.length - 6)}'));
+    b.writeln(line(t('Cashier', 'Khasnaji'), sale.cashier));
+    if (sale.tableNo.isNotEmpty) {
+      b.writeln(line(t('Table', 'Miis'), '#${sale.tableNo}'));
+    }
     b.writeln('=' * w);
     for (final it in sale.items) {
       b.writeln(it.name);
@@ -317,24 +329,25 @@ class _ReceiptDialog extends StatelessWidget {
           store.money(it.total)));
     }
     b.writeln('-' * w);
-    b.writeln(line('Subtotal', store.money(sale.subtotal)));
-    if (sale.tax > 0) b.writeln(line('Tax', store.money(sale.tax)));
+    b.writeln(line(t('Subtotal', 'Wadar hoose'), store.money(sale.subtotal)));
+    if (sale.tax > 0) b.writeln(line(t('Tax', 'Cashuur'), store.money(sale.tax)));
     b.writeln('=' * w);
-    b.writeln(line('TOTAL', store.money(sale.total)));
+    b.writeln(line(t('TOTAL', 'WADARTA'), store.money(sale.total)));
     b.writeln('=' * w);
-    b.writeln(line('Paid by', sale.payMethod));
+    b.writeln(line(t('Paid by', 'Lagu bixiyay'), sale.payMethod));
     if (sale.payMethod == 'cash' && sale.change > 0) {
-      b.writeln(line('Received', store.money(sale.paid)));
-      b.writeln(line('Change', store.money(sale.change)));
+      b.writeln(line(t('Received', 'La helay'), store.money(sale.paid)));
+      b.writeln(line(t('Change', 'Baaqi'), store.money(sale.change)));
     }
     b.writeln();
-    b.writeln(center('Thank you!'));
+    b.writeln(center(t('Thank you!', 'Mahadsanid!')));
+    b.writeln(center('Powered by MareegTech Solutions'));
     return b.toString();
   }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Receipt'),
+        title: Text(t('Receipt', 'Rasiidka')),
         content: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -351,7 +364,7 @@ class _ReceiptDialog extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Done')),
+            child: Text(t('Done', 'Diyaar'))),
         ],
       );
 }

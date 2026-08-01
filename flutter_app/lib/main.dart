@@ -23,6 +23,24 @@ const kBlue = Color(0xFF1A6EF5);
 const kCyan = Color(0xFF00B8D9);
 const kGreen = Color(0xFF1F9D63);
 
+/// Tiny i18n helper mirroring the web app's T(en, so). Reads the live language,
+/// so flipping it and calling notifyListeners() re-renders everything.
+String t(String en, String so) => store.lang == 'so' ? so : en;
+
+/// Display name for a business industry (Business.type), in the current language.
+String industryName(String key) {
+  switch (key) {
+    case 'restaurant':
+      return t('Restaurant', 'Maqaayad');
+    case 'cafe':
+      return t('Cafe', 'Kafateeriya');
+    case 'bar':
+      return t('Juice / Tea Bar', 'Casiir / Shaah');
+    default:
+      return t('Shop / Retail', 'Dukaan');
+  }
+}
+
 class CasriApp extends StatelessWidget {
   const CasriApp({super.key});
 
@@ -130,6 +148,22 @@ class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
   @override
+  void initState() {
+    super.initState();
+    store.addListener(_onChange); // rebuild nav + screens on language change
+  }
+
+  @override
+  void dispose() {
+    store.removeListener(_onChange);
+    super.dispose();
+  }
+
+  void _onChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     // A bottom bar is what makes this read as an app rather than a web page:
     // the main jobs are always one thumb-reach away.
@@ -146,23 +180,23 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
         height: 68,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.point_of_sale_outlined),
-            selectedIcon: Icon(Icons.point_of_sale),
-            label: 'Sell'),
+            icon: const Icon(Icons.point_of_sale_outlined),
+            selectedIcon: const Icon(Icons.point_of_sale),
+            label: t('Sell', 'Iibi')),
           NavigationDestination(
-            icon: Icon(Icons.inventory_2_outlined),
-            selectedIcon: Icon(Icons.inventory_2),
-            label: 'Products'),
+            icon: const Icon(Icons.inventory_2_outlined),
+            selectedIcon: const Icon(Icons.inventory_2),
+            label: t('Products', 'Alaabta')),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Sales'),
+            icon: const Icon(Icons.receipt_long_outlined),
+            selectedIcon: const Icon(Icons.receipt_long),
+            label: t('Sales', 'Iibka')),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings'),
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: t('Settings', 'Dejinta')),
         ],
       ),
     );

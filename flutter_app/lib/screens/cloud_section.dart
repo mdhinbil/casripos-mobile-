@@ -50,7 +50,8 @@ class _CloudSectionState extends State<CloudSection> {
 
       // Master account skips workspaces/direction entirely — it manages others.
       if (cloud.master) {
-        _say('Signed in as MareegTech admin');
+        _say(t('Signed in as MareegTech admin',
+            'Waxaad u gashay sida maamulaha MareegTech'));
         return; // `finally` clears _busy
       }
 
@@ -60,17 +61,18 @@ class _CloudSectionState extends State<CloudSection> {
         final keep = await _askDirection(local, remote);
         if (keep == 'cloud') {
           await store.adoptCloudData();
-          _say('Using cloud data');
+          _say(t('Using cloud data', 'La isticmaalayo xogta cloud-ka'));
         } else if (keep == 'local') {
           await store.uploadLocalData();
-          _say('This device\'s data uploaded');
+          _say(t('This device\'s data uploaded',
+              'Xogta qalabkan waa la soo geliyay'));
         }
       } else if (remote.has) {
         await store.adoptCloudData();
-        _say('Cloud data restored');
+        _say(t('Cloud data restored', 'Xogta cloud-ka waa la soo celiyay'));
       } else {
         await store.uploadLocalData();
-        _say('Data uploaded to cloud');
+        _say(t('Data uploaded to cloud', 'Xogta waa la geliyay cloud-ka'));
       }
 
       // Register the workspace for approval if it isn't already.
@@ -82,7 +84,8 @@ class _CloudSectionState extends State<CloudSection> {
           await cloud.registerWorkspace(reg.name, reg.plan);
           store.planId = reg.plan;
           await cloud.refreshWorkspace();
-          _say('Business submitted for approval');
+          _say(t('Business submitted for approval',
+              'Ganacsiga waa loo gudbiyay ansixin'));
         }
       }
     } catch (e) {
@@ -98,7 +101,7 @@ class _CloudSectionState extends State<CloudSection> {
       await cloud.pull(force: false);
       await cloud.pushAll();
       store.reload();
-      _say('Synced');
+      _say(t('Synced', 'La isku waafajiyay'));
     } catch (e) {
       _say(Cloud.errText(e));
     } finally {
@@ -121,26 +124,29 @@ class _CloudSectionState extends State<CloudSection> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: Text(isNew ? 'Create business account' : 'Link to cloud'),
+          title: Text(isNew
+              ? t('Create business account', 'Samee akoon ganacsi')
+              : t('Link to cloud', 'Ku xir cloud-ka')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: e,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: t('Email', 'Iimayl')),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: p,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration:
+                    InputDecoration(labelText: t('Password', 'Furaha')),
               ),
               const SizedBox(height: 6),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: const Text('Create a new account'),
+                title: Text(t('Create a new account', 'Samee akoon cusub')),
                 value: isNew,
                 onChanged: (v) => setD(() => isNew = v),
               ),
@@ -149,14 +155,14 @@ class _CloudSectionState extends State<CloudSection> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel')),
+                child: Text(t('Cancel', 'Jooji'))),
             FilledButton(
               onPressed: () {
                 if (e.text.trim().isEmpty || p.text.isEmpty) return;
                 Navigator.pop(
                     ctx, _Creds(e.text.trim(), p.text, isNew));
               },
-              child: Text(isNew ? 'Create' : 'Sign in'),
+              child: Text(isNew ? t('Create', 'Samee') : t('Sign in', 'Gal')),
             ),
           ],
         ),
@@ -168,29 +174,34 @@ class _CloudSectionState extends State<CloudSection> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Which data to keep?'),
+        title: Text(t('Which data to keep?', 'Xogtee la hayaa?')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('The cloud has ${remote.products} products, ${remote.sales} '
-                'sales.\nThis device has ${local.products} products, '
-                '${local.sales} sales.'),
+            Text(t(
+                'The cloud has ${remote.products} products, ${remote.sales} '
+                    'sales.\nThis device has ${local.products} products, '
+                    '${local.sales} sales.',
+                'Cloud-ku wuxuu leeyahay ${remote.products} alaab, '
+                    '${remote.sales} iib.\nQalabkanna wuxuu leeyahay '
+                    '${local.products} alaab, ${local.sales} iib.')),
             const SizedBox(height: 8),
-            const Text('Pick one — the other is replaced.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF6B7688))),
+            Text(t('Pick one — the other is replaced.',
+                'Mid dooro — kan kale waa la beddelayaa.'),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7688))),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(t('Cancel', 'Jooji'))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, 'local'),
-              child: const Text('Keep this device')),
+              child: Text(t('Keep this device', 'Hay qalabkan'))),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, 'cloud'),
-              child: const Text('Use cloud')),
+              child: Text(t('Use cloud', 'Isticmaal cloud'))),
         ],
       ),
     );
@@ -205,7 +216,7 @@ class _CloudSectionState extends State<CloudSection> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('Register business'),
+          title: Text(t('Register business', 'Diiwaangeli ganacsi')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -213,12 +224,12 @@ class _CloudSectionState extends State<CloudSection> {
               children: [
                 TextField(
                   controller: nameC,
-                  decoration:
-                      const InputDecoration(labelText: 'Business name'),
+                  decoration: InputDecoration(
+                      labelText: t('Business name', 'Magaca ganacsiga')),
                 ),
                 const SizedBox(height: 14),
-                const Text('Plan',
-                    style: TextStyle(
+                Text(t('Plan', 'Qorshaha'),
+                    style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF6B7688))),
@@ -232,8 +243,8 @@ class _CloudSectionState extends State<CloudSection> {
                       onChanged: (v) => setD(() => planId = v ?? planId),
                     )),
                 const SizedBox(height: 8),
-                const Text('Industry',
-                    style: TextStyle(
+                Text(t('Industry', 'Nooca ganacsiga'),
+                    style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF6B7688))),
@@ -242,30 +253,33 @@ class _CloudSectionState extends State<CloudSection> {
                   value: industry,
                   isExpanded: true,
                   decoration: const InputDecoration(isDense: true),
-                  items: industries.entries
-                      .map((e) => DropdownMenuItem(
-                          value: e.key, child: Text(e.value)))
+                  items: industries.keys
+                      .map((k) => DropdownMenuItem(
+                          value: k, child: Text(industryName(k))))
                       .toList(),
                   onChanged: (v) => setD(() => industry = v ?? industry),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                    'MareegTech approves new businesses before they go live.',
-                    style:
-                        TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+                Text(
+                    t(
+                        'MareegTech approves new businesses before they go live.',
+                        'MareegTech ayaa ansixiya ganacsiyada cusub ka hor inta '
+                            'aan la shaqaysiin.'),
+                    style: const TextStyle(
+                        fontSize: 11.5, color: Color(0xFF98A2B3))),
               ],
             ),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Later')),
+                child: Text(t('Later', 'Hadhow'))),
             FilledButton(
               onPressed: () {
                 if (nameC.text.trim().isEmpty) return;
                 Navigator.pop(ctx, _Reg(nameC.text.trim(), planId, industry));
               },
-              child: const Text('Submit'),
+              child: Text(t('Submit', 'Gudbi')),
             ),
           ],
         ),
@@ -280,18 +294,24 @@ class _CloudSectionState extends State<CloudSection> {
       return Card(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
               child: Text(
-                'Link this till to the cloud to back up automatically and sync '
-                'across devices. Works with your web business account.',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF5C6B82)),
+                t(
+                    'Link this till to the cloud to back up automatically and '
+                        'sync across devices. Works with your web business '
+                        'account.',
+                    'Ku xir khasnaddan cloud-ka si ay iskeed u kaydsato oo ay '
+                        'ula socoto aaladaha kale. Waxay la shaqaysaa akoonkaaga '
+                        'ganacsi ee web-ka.'),
+                style: const TextStyle(fontSize: 12.5, color: Color(0xFF5C6B82)),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.cloud_outlined, color: kBlue),
-              title: const Text('Link to cloud'),
-              subtitle: const Text('Sign in or create a business account'),
+              title: Text(t('Link to cloud', 'Ku xir cloud-ka')),
+              subtitle: Text(t('Sign in or create a business account',
+                  'Gal ama samee akoon ganacsi')),
               onTap: _busy ? null : _link,
             ),
           ],
@@ -314,8 +334,9 @@ class _CloudSectionState extends State<CloudSection> {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.groups_outlined, color: kBlue),
-              title: const Text('Businesses console'),
-              subtitle: const Text('Approve or revoke client businesses'),
+              title: Text(t('Businesses console', 'Maamulka ganacsiyada')),
+              subtitle: Text(t('Approve or revoke client businesses',
+                  'Ansixi ama joojin ganacsiyada macaamiisha')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => const WorkspacesAdminScreen())),
@@ -323,7 +344,7 @@ class _CloudSectionState extends State<CloudSection> {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.logout, color: Color(0xFFD63B3B)),
-              title: const Text('Sign out of cloud'),
+              title: Text(t('Sign out of cloud', 'Ka bax cloud-ka')),
               onTap: _busy ? null : _unlink,
             ),
           ],
@@ -352,17 +373,22 @@ class _CloudSectionState extends State<CloudSection> {
               width: double.infinity,
               color: const Color(0xFFFFF4E5),
               padding: const EdgeInsets.all(12),
-              child: const Text(
-                'Pending approval — MareegTech must approve this business '
-                'before it goes live. Your data is safely backed up meanwhile.',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF8A5A00)),
+              child: Text(
+                t(
+                    'Pending approval — MareegTech must approve this business '
+                        'before it goes live. Your data is safely backed up '
+                        'meanwhile.',
+                    'Sugaya ansixin — MareegTech waa inuu ansixiyaa ganacsigan '
+                        'ka hor inta aan la shaqaysiin. Xogtaadu si ammaan ah ayay '
+                        'u kaydsan tahay inta lagu jiro.'),
+                style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A5A00)),
               ),
             ),
           if (cloud.wsPlan.isNotEmpty)
             ListTile(
               dense: true,
               leading: const Icon(Icons.workspace_premium_outlined, size: 20),
-              title: Text('Plan: ${cloud.wsPlan}'),
+              title: Text('${t('Plan', 'Qorshaha')}: ${cloud.wsPlan}'),
             ),
           const Divider(height: 1),
           ListTile(
@@ -372,16 +398,18 @@ class _CloudSectionState extends State<CloudSection> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.sync, color: kBlue),
-            title: const Text('Sync now'),
+            title: Text(t('Sync now', 'Hadda isku waafaji')),
             subtitle: Text(cloud.lastError.isNotEmpty
                 ? cloud.lastError
-                : (cloud.status == 'ok' ? 'Up to date' : 'Pull + push')),
+                : (cloud.status == 'ok'
+                    ? t('Up to date', 'Waa la cusbooneysiiyay')
+                    : t('Pull + push', 'Soo jiid + dir'))),
             onTap: _busy ? null : _syncNow,
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.logout, color: Color(0xFFD63B3B)),
-            title: const Text('Sign out of cloud'),
+            title: Text(t('Sign out of cloud', 'Ka bax cloud-ka')),
             onTap: _busy ? null : _unlink,
           ),
         ],

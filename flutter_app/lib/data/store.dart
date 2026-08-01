@@ -101,6 +101,14 @@ class Store extends ChangeNotifier {
     final fx = _readMap(kFx);
     fxSos = (fx['sos'] as num?)?.toDouble() ?? 580;
     fxSlsh = (fx['slsh'] as num?)?.toDouble() ?? 8500;
+    lang = _sp.getString('pos_lang') == 'so' ? 'so' : 'en';
+  }
+
+  /// Switch UI language (en/so) and re-render everything that reads t().
+  void setLang(String l) {
+    lang = l == 'so' ? 'so' : 'en';
+    _sp.setString('pos_lang', lang);
+    notifyListeners();
   }
 
   List<Map<String, dynamic>> _readList(String k) {

@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await f.writeAsString(json);
       await Share.shareXFiles([XFile(f.path)], subject: 'Casri POS backup');
     } catch (e) {
-      _say('Could not export: $e');
+      _say('${t('Could not export', 'Lama soo saari karo')}: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -48,14 +48,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final go = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Restore from backup'),
+        title: Text(t('Restore from backup', 'Ka soo celi kayd')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(t(
                 'Paste the contents of a backup below. This replaces everything '
-                'on this device. Export a backup first if you are unsure.'),
+                    'on this device. Export a backup first if you are unsure.',
+                'Hoos ku dhaji nuxurka kaydka. Tani waxay beddeshaa wax walba oo '
+                    'qalabkan ku jira. Marka hore kaydka soo saar haddii aadan '
+                    'hubin.')),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -73,10 +76,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(t('Cancel', 'Jooji'))),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Restore')),
+              child: Text(t('Restore', 'Soo celi'))),
         ],
       ),
     );
@@ -90,11 +93,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (err != null) {
         _say(err);
       } else {
-        _say('Backup restored');
+        _say(t('Backup restored', 'Kaydka waa la soo celiyay'));
         setState(() {});
       }
     } catch (e) {
-      _say('Could not import: $e');
+      _say('${t('Could not import', 'Lama soo deji karo')}: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -105,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final b = store.biz;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(t('Settings', 'Dejinta'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 30),
         children: [
@@ -130,46 +133,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const _SectionLabel('Cloud & business'),
+          _SectionLabel(t('Language', 'Luqadda')),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(children: [
+                _LangBtn('English', store.lang == 'en',
+                    () => setState(() => store.setLang('en'))),
+                const SizedBox(width: 8),
+                _LangBtn('Soomaali', store.lang == 'so',
+                    () => setState(() => store.setLang('so'))),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionLabel(t('Cloud & business', 'Cloud & ganacsi')),
           const CloudSection(),
           const SizedBox(height: 14),
-          const _SectionLabel('Backup & restore'),
+          _SectionLabel(t('Backup & restore', 'Kaydinta & soo celinta')),
           Card(
             child: Column(
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
                   child: Text(
-                    'Everything is stored on THIS device. Export a backup '
-                    'regularly — if the phone is lost or reset, it is the only '
-                    'way to get your sales and products back.',
-                    style: TextStyle(fontSize: 12.5, color: Color(0xFF5C6B82)),
+                    t(
+                        'Everything is stored on THIS device. Export a backup '
+                            'regularly — if the phone is lost or reset, it is the '
+                            'only way to get your sales and products back.',
+                        'Wax walba waxay ku kaydsan yihiin qalabkan. Had iyo jeer '
+                            'kaydka soo saar — haddii telefoonku lumo ama dib loo '
+                            'dejiyo, sidaas keliya ayaad iibkaaga iyo alaabtaada '
+                            'ku soo celin kartaa.'),
+                    style: const TextStyle(
+                        fontSize: 12.5, color: Color(0xFF5C6B82)),
                   ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.download_outlined, color: kBlue),
-                  title: const Text('Export backup'),
-                  subtitle: const Text('Save or share a .json file'),
+                  title: Text(t('Export backup', 'Soo saar kaydka')),
+                  subtitle: Text(
+                      t('Save or share a .json file', 'Kaydi ama wadaag file')),
                   onTap: _busy ? null : _export,
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.upload_outlined, color: kBlue),
-                  title: const Text('Import backup'),
-                  subtitle:
-                      const Text('Also reads backups from the old app'),
+                  title: Text(t('Import backup', 'Soo deji kaydka')),
+                  subtitle: Text(t('Also reads backups from the old app',
+                      'Waxay sidoo kale akhrida kaydka appka hore')),
                   onTap: _busy ? null : _import,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          const _SectionLabel('Account'),
+          _SectionLabel(t('Account', 'Akoonka')),
           Card(
             child: ListTile(
               leading: const Icon(Icons.logout, color: Color(0xFFD63B3B)),
-              title: const Text('Sign out',
-                  style: TextStyle(
+              title: Text(t('Sign out', 'Ka bax'),
+                  style: const TextStyle(
                       fontWeight: FontWeight.w700, color: Color(0xFFD63B3B))),
               onTap: () async {
                 store.signOut(); // local first, then cloud (no screen flash)
@@ -186,6 +210,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+  const _LangBtn(this.label, this.on, this.onTap);
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: on ? kBlue : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: on ? kBlue : const Color(0xFFD8E0EA)),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: on ? Colors.white : const Color(0xFF44536B))),
+          ),
+        ),
+      );
 }
 
 class _SectionLabel extends StatelessWidget {

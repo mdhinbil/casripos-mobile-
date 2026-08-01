@@ -22,7 +22,7 @@ class SalesScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(title: const Text('Sales')),
+      appBar: AppBar(title: Text(t('Sales', 'Iibka'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
         children: [
@@ -32,8 +32,8 @@ class SalesScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('TODAY',
-                      style: TextStyle(
+                  Text(t('TODAY', 'MAANTA'),
+                      style: const TextStyle(
                           fontSize: 11,
                           letterSpacing: .7,
                           fontWeight: FontWeight.w800,
@@ -44,7 +44,7 @@ class SalesScreen extends StatelessWidget {
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
                           color: kNavy)),
-                  Text('${todaySales.length} sales',
+                  Text('${todaySales.length} ${t('sales', 'iib')}',
                       style: const TextStyle(
                           fontSize: 12.5, color: Color(0xFF5C6B82))),
                   if (byMethod.isNotEmpty) ...[
@@ -86,20 +86,20 @@ class SalesScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
-            child: Text('Recent',
-                style: TextStyle(
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(t('Recent', 'Kuwii dhawaa'),
+                style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF44536B))),
           ),
           if (sales.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
               child: Center(
-                  child: Text('No sales yet',
-                      style: TextStyle(color: Color(0xFF6B7688)))),
+                  child: Text(t('No sales yet', 'Weli iib ma jirto'),
+                      style: const TextStyle(color: Color(0xFF6B7688)))),
             ),
           for (final s in sales.take(60)) _SaleCard(sale: s),
         ],
@@ -108,9 +108,9 @@ class SalesScreen extends StatelessWidget {
   }
 
   static String _label(String m) => switch (m) {
-        'card' => 'Card',
-        'mobile' => 'Mobile money',
-        _ => 'Cash',
+        'card' => t('Card', 'Kaadh'),
+        'mobile' => t('Mobile money', 'Lacag mobile'),
+        _ => t('Cash', 'Cash'),
       };
 }
 
@@ -156,11 +156,11 @@ class _SaleCard extends StatelessWidget {
                   Text('#${sale.id.substring(sale.id.length - 6)}',
                       style: const TextStyle(
                           fontWeight: FontWeight.w800, fontSize: 13.5)),
-                  Text('$date · $time · $count items',
+                  Text('$date · $time · $count ${t('items', 'shay')}',
                       style: const TextStyle(
                           fontSize: 11.5, color: Color(0xFF5C6B82))),
                   if (sale.tableNo.isNotEmpty)
-                    Text('Table ${sale.tableNo} · ${sale.orderType}',
+                    Text('${t('Table', 'Miis')} ${sale.tableNo} · ${sale.orderType}',
                         style: const TextStyle(
                             fontSize: 11, color: Color(0xFF8B97A8))),
                 ],

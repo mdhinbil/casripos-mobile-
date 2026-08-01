@@ -40,11 +40,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final items = _list;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(title: const Text('Products')),
+      appBar: AppBar(title: Text(t('Products', 'Alaabta'))),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _edit(),
         icon: const Icon(Icons.add),
-        label: const Text('Add'),
+        label: Text(t('Add', 'Ku dar')),
       ),
       body: Column(
         children: [
@@ -52,18 +52,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
             child: TextField(
               onChanged: (v) => setState(() => _q = v),
-              decoration: const InputDecoration(
-                hintText: 'Search products…',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: t('Search products…', 'Raadi alaabta…'),
+                prefixIcon: const Icon(Icons.search),
                 isDense: true,
               ),
             ),
           ),
           Expanded(
             child: items.isEmpty
-                ? const Center(
-                    child: Text('No products yet',
-                        style: TextStyle(color: Color(0xFF6B7688))))
+                ? Center(
+                    child: Text(t('No products yet', 'Weli alaab ma jirto'),
+                        style: const TextStyle(color: Color(0xFF6B7688))))
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 90),
                     itemCount: items.length,
@@ -87,7 +87,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               Row(children: [
                                 if (p.cat.isNotEmpty) _Pill(p.cat),
                                 if (p.cat.isNotEmpty) const SizedBox(width: 6),
-                                _Pill('Stock ${p.stock}',
+                                _Pill('${t('Stock', 'Kayd')} ${p.stock}',
                                     danger: p.stock <= 0, warn: low),
                               ]),
                               if (p.barcode.isNotEmpty)
@@ -192,8 +192,11 @@ class _ProductSheetState extends State<_ProductSheet> {
     if (widget.existing == null && store.productCapReached) {
       final pl = store.plan!;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Your ${pl.id} plan allows ${pl.maxProducts} products. '
-              'Remove one or upgrade your plan.')));
+          content: Text(t(
+              'Your ${pl.id} plan allows ${pl.maxProducts} products. '
+                  'Remove one or upgrade your plan.',
+              'Qorshahaaga ${pl.id} wuxuu ogol yahay ${pl.maxProducts} alaab. '
+                  'Mid ka saar ama qorshahaaga kordhi.'))));
       return;
     }
     final price = double.tryParse(_p.text.trim()) ?? 0;
@@ -258,26 +261,31 @@ class _ProductSheetState extends State<_ProductSheet> {
                         borderRadius: BorderRadius.circular(3))),
               ),
               const SizedBox(height: 16),
-              Text(widget.existing == null ? 'Add product' : 'Edit product',
+              Text(
+                  widget.existing == null
+                      ? t('Add product', 'Ku dar alaab')
+                      : t('Edit product', 'Wax ka beddel alaab'),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w800, color: kNavy)),
               const SizedBox(height: 14),
               TextField(
                   controller: _n,
-                  decoration: const InputDecoration(labelText: 'Name')),
+                  decoration:
+                      InputDecoration(labelText: t('Name', 'Magaca'))),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(
                     child: TextField(
                         controller: _c,
-                        decoration:
-                            const InputDecoration(labelText: 'Category'))),
+                        decoration: InputDecoration(
+                            labelText: t('Category', 'Qaybta')))),
                 const SizedBox(width: 10),
                 SizedBox(
                     width: 92,
                     child: TextField(
                         controller: _i,
-                        decoration: const InputDecoration(labelText: 'Icon'))),
+                        decoration: InputDecoration(
+                            labelText: t('Icon', 'Astaan')))),
               ]),
               const SizedBox(height: 10),
               Row(children: [
@@ -286,21 +294,23 @@ class _ProductSheetState extends State<_ProductSheet> {
                         controller: _p,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration:
-                            const InputDecoration(labelText: 'Price (USD)'))),
+                        decoration: InputDecoration(
+                            labelText: t('Price (USD)', 'Qiimaha (USD)')))),
                 const SizedBox(width: 10),
                 Expanded(
                     child: TextField(
                         controller: _s,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Stock'))),
+                        decoration: InputDecoration(
+                            labelText: t('Stock', 'Kaydka')))),
               ]),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(
                     child: TextField(
                         controller: _sku,
-                        decoration: const InputDecoration(labelText: 'SKU'))),
+                        decoration:
+                            const InputDecoration(labelText: 'SKU'))),
                 const SizedBox(width: 10),
                 Expanded(
                     child: TextField(
@@ -315,7 +325,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                     child: OutlinedButton.icon(
                       onPressed: _delete,
                       icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete'),
+                      label: Text(t('Delete', 'Tirtir')),
                       style: OutlinedButton.styleFrom(
                           minimumSize: const Size(0, 52),
                           foregroundColor: const Color(0xFFC62F16),
@@ -325,8 +335,8 @@ class _ProductSheetState extends State<_ProductSheet> {
                 if (widget.existing != null) const SizedBox(width: 10),
                 Expanded(
                   flex: 2,
-                  child:
-                      FilledButton(onPressed: _save, child: const Text('Save')),
+                  child: FilledButton(
+                      onPressed: _save, child: Text(t('Save', 'Kaydi'))),
                 ),
               ]),
             ],

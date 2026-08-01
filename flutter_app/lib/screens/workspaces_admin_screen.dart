@@ -78,7 +78,7 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
               icon: const Icon(Icons.refresh)),
           if (widget.isHome)
             IconButton(
-              tooltip: 'Sign out',
+              tooltip: t('Sign out', 'Ka bax'),
               onPressed: () async {
                 store.signOut(); // clear local session first (no till flash)
                 await cloud.signOut();
@@ -92,9 +92,9 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
           : _error.isNotEmpty
               ? _ErrorView(message: _error, onRetry: _load)
               : _rows.isEmpty
-                  ? const Center(
-                      child: Text('No businesses yet',
-                          style: TextStyle(color: Color(0xFF6B7688))))
+                  ? Center(
+                      child: Text(t('No businesses yet', 'Weli ganacsi ma jirto'),
+                          style: const TextStyle(color: Color(0xFF6B7688))))
                   : Column(
                       children: [
                         if (pending > 0)
@@ -102,7 +102,8 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
                             width: double.infinity,
                             color: const Color(0xFFFFF4E5),
                             padding: const EdgeInsets.all(12),
-                            child: Text('$pending awaiting approval',
+                            child: Text(
+                                '$pending ${t('awaiting approval', 'sugaya ansixin')}',
                                 style: const TextStyle(
                                     color: Color(0xFF8A5A00),
                                     fontWeight: FontWeight.w700,
@@ -132,7 +133,7 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(w.name.isNotEmpty ? w.name : '(unnamed)',
+                  Text(w.name.isNotEmpty ? w.name : t('(unnamed)', '(magac la\'aan)'),
                       style: const TextStyle(
                           fontWeight: FontWeight.w800, fontSize: 14)),
                   Text(w.email,
@@ -165,7 +166,10 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
                               : const Color(0xFFFFF0DB),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(w.approved ? 'Approved' : 'Pending',
+                        child: Text(
+                            w.approved
+                                ? t('Approved', 'La ansixiyay')
+                                : t('Pending', 'Sugaya'),
                             style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
@@ -190,12 +194,12 @@ class _WorkspacesAdminScreenState extends State<WorkspacesAdminScreen> {
                 : w.approved
                     ? OutlinedButton(
                         onPressed: () => _toggle(w),
-                        child: const Text('Revoke'))
+                        child: Text(t('Revoke', 'Joojin')))
                     : FilledButton(
                         onPressed: () => _toggle(w),
                         style:
                             FilledButton.styleFrom(backgroundColor: kGreen),
-                        child: const Text('Approve')),
+                        child: Text(t('Approve', 'Ansixi'))),
           ],
         ),
       ),
@@ -221,7 +225,9 @@ class _ErrorView extends StatelessWidget {
                   style: const TextStyle(color: Color(0xFF6B7688))),
             ),
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(
+                onPressed: onRetry,
+                child: Text(t('Retry', 'Isku day mar kale'))),
           ],
         ),
       );

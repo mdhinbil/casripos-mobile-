@@ -113,9 +113,9 @@ class _PosScreenState extends State<PosScreen> {
           child: TextField(
             onChanged: (v) => setState(() => _query = v),
             textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              hintText: 'Search or scan barcode…',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: t('Search or scan barcode…', 'Raadi ama iskaan barcode…'),
+              prefixIcon: const Icon(Icons.search),
               isDense: true,
             ),
           ),
@@ -143,7 +143,7 @@ class _PosScreenState extends State<PosScreen> {
                       border: Border.all(color: col, width: 2),
                     ),
                     child: Text(
-                      ct == 'all' ? 'All' : ct,
+                      ct == 'all' ? t('All', 'Dhammaan') : ct,
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
@@ -183,14 +183,15 @@ class _PosScreenState extends State<PosScreen> {
 class _Empty extends StatelessWidget {
   const _Empty();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 46, color: Color(0xFFB6C0CE)),
-            SizedBox(height: 10),
-            Text('No products match',
-                style: TextStyle(color: Color(0xFF6B7688), fontSize: 14)),
+            const Icon(Icons.inventory_2_outlined,
+                size: 46, color: Color(0xFFB6C0CE)),
+            const SizedBox(height: 10),
+            Text(t('No products match', 'Wax alaab ah lama helin'),
+                style: const TextStyle(color: Color(0xFF6B7688), fontSize: 14)),
           ],
         ),
       );
@@ -290,7 +291,7 @@ class _CartPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                Text('🛒 Cart (${store.cartCount})',
+                Text('🛒 ${t('Cart', 'Dambiisha')} (${store.cartCount})',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -302,23 +303,24 @@ class _CartPanel extends StatelessWidget {
                       store.clearCart();
                       onChanged();
                     },
-                    child: const Text('✕ Clear',
-                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    child: Text('✕ ${t('Clear', 'Tirtir')}',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12)),
                   ),
               ],
             ),
           ),
           Expanded(
             child: store.cart.isEmpty
-                ? const Center(
+                ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.shopping_cart_outlined,
+                        const Icon(Icons.shopping_cart_outlined,
                             size: 42, color: Color(0xFFC3CBD6)),
-                        SizedBox(height: 8),
-                        Text('Cart is empty',
-                            style: TextStyle(color: Color(0xFF8A93A3))),
+                        const SizedBox(height: 8),
+                        Text(t('Cart is empty', 'Dambiishu waa madhan'),
+                            style: const TextStyle(color: Color(0xFF8A93A3))),
                       ],
                     ),
                   )
@@ -344,13 +346,17 @@ class _ReceiptTableState extends State<_ReceiptTable> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(12, 8, 12, 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
           child: Row(children: [
-            Expanded(flex: 5, child: _Hd('PRODUCT')),
-            Expanded(flex: 4, child: Center(child: _Hd('QTY'))),
-            Expanded(flex: 3, child: Align(alignment: Alignment.centerRight, child: _Hd('TOTAL'))),
-            SizedBox(width: 22),
+            Expanded(flex: 5, child: _Hd(t('PRODUCT', 'ALAAB'))),
+            Expanded(flex: 4, child: Center(child: _Hd(t('QTY', 'TIRO')))),
+            Expanded(
+                flex: 3,
+                child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _Hd(t('TOTAL', 'WADAR')))),
+            const SizedBox(width: 22),
           ]),
         ),
         const Divider(height: 1),
@@ -484,11 +490,12 @@ class _CartFooter extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         children: [
-          _SumRow('Subtotal', store.money(store.cartSubtotal)),
+          _SumRow(t('Subtotal', 'Wadarta hoose'), store.money(store.cartSubtotal)),
           if (store.biz.tax > 0)
-            _SumRow('Tax (${store.biz.tax}%)', store.money(store.cartTax)),
+            _SumRow('${t('Tax', 'Cashuur')} (${store.biz.tax}%)',
+                store.money(store.cartTax)),
           const Divider(height: 16),
-          _SumRow('TOTAL', store.money(store.cartTotal), big: true),
+          _SumRow(t('TOTAL', 'WADARTA'), store.money(store.cartTotal), big: true),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
@@ -505,7 +512,7 @@ class _CartFooter extends StatelessWidget {
                       onChanged();
                     },
               icon: const Icon(Icons.payments_outlined),
-              label: const Text('Charge'),
+              label: Text(t('Charge', 'Bixi')),
               style: FilledButton.styleFrom(
                   backgroundColor: kGreen,
                   padding: const EdgeInsets.symmetric(vertical: 14)),
@@ -557,8 +564,8 @@ class _CartBar extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('View cart',
-                          style: TextStyle(
+                      Text(t('View cart', 'Eeg dambiisha'),
+                          style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600)),
@@ -584,7 +591,7 @@ class _CartBar extends StatelessWidget {
               onChanged();
             },
             icon: const Icon(Icons.payments_outlined),
-            label: const Text('Charge'),
+            label: Text(t('Charge', 'Bixi')),
             style: FilledButton.styleFrom(backgroundColor: kGreen),
           ),
         ],
@@ -625,7 +632,7 @@ class _CartSheetState extends State<CartSheet> {
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 6),
               child: Row(
                 children: [
-                  Text('Cart · ${store.cartCount} items',
+                  Text('${t('Cart', 'Dambiisha')} · ${store.cartCount} ${t('items', 'shay')}',
                       style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -637,7 +644,7 @@ class _CartSheetState extends State<CartSheet> {
                       Navigator.pop(context);
                     },
                     icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Clear'),
+                    label: Text(t('Clear', 'Tirtir')),
                     style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFFC62F16)),
                   ),

@@ -24,7 +24,10 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     try {
       await cloud.refreshWorkspace();
       // If it's now approved, the RootGate rebuilds into the till automatically.
-      if (mounted && !cloud.wsApproved) _say('Still pending — check back soon');
+      if (mounted && !cloud.wsApproved) {
+        _say(t('Still pending — check back soon',
+            'Weli sugaya — dib u eeg mar dhow'));
+      }
     } catch (e) {
       _say(Cloud.errText(e));
     } finally {
@@ -69,19 +72,26 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                             color: Color(0xFFE0842B), size: 34),
                       ),
                       const SizedBox(height: 16),
-                      const Text('Waiting for approval',
-                          style: TextStyle(
+                      Text(t('Waiting for approval', 'Sugaya ansixinta'),
+                          style: const TextStyle(
                               fontSize: 21,
                               fontWeight: FontWeight.w800,
                               color: kNavy)),
                       const SizedBox(height: 8),
                       Text(
                         cloud.wsName.isNotEmpty
-                            ? '“${cloud.wsName}” has been submitted. MareegTech '
-                                'will approve it shortly. You can sell once it is '
-                                'approved.'
-                            : 'Your business has been submitted. MareegTech will '
-                                'approve it shortly.',
+                            ? t(
+                                '“${cloud.wsName}” has been submitted. MareegTech '
+                                    'will approve it shortly. You can sell once it '
+                                    'is approved.',
+                                '“${cloud.wsName}” waa la gudbiyay. MareegTech '
+                                    'ayaa dhawaan ansixin doona. Waad iibin kartaa '
+                                    'marka la ansixiyo.')
+                            : t(
+                                'Your business has been submitted. MareegTech '
+                                    'will approve it shortly.',
+                                'Ganacsigaaga waa la gudbiyay. MareegTech ayaa '
+                                    'dhawaan ansixin doona.'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                             fontSize: 13.5, color: Color(0xFF5C6B82), height: 1.4),
@@ -104,13 +114,13 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2, color: Colors.white))
                               : const Icon(Icons.refresh),
-                          label: const Text('Check again'),
+                          label: Text(t('Check again', 'Dib u hubi')),
                         ),
                       ),
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: _busy ? null : _switchAccount,
-                        child: const Text('Sign out'),
+                        child: Text(t('Sign out', 'Ka bax')),
                       ),
                     ],
                   ),

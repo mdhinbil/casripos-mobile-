@@ -37,7 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _email.text.trim();
     final pw = _wpass.text;
     if (email.isEmpty || pw.isEmpty) {
-      setState(() => _err = 'Enter email and password');
+      setState(() =>
+          _err = t('Enter email and password', 'Geli iimayl iyo furaha'));
       return;
     }
     setState(() {
@@ -98,7 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _staffGo() {
     if (!store.signIn(_user.text, _pass.text)) {
-      setState(() => _err = 'Wrong username or password');
+      setState(() => _err =
+          t('Wrong username or password', 'Magaca ama furaha waa khalad'));
     }
   }
 
@@ -106,29 +108,34 @@ class _LoginScreenState extends State<LoginScreen> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Which data to keep?'),
+        title: Text(t('Which data to keep?', 'Xogtee la hayaa?')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('The cloud has ${remote.products} products, ${remote.sales} '
-                'sales.\nThis device has ${local.products} products, '
-                '${local.sales} sales.'),
+            Text(t(
+                'The cloud has ${remote.products} products, ${remote.sales} '
+                    'sales.\nThis device has ${local.products} products, '
+                    '${local.sales} sales.',
+                'Cloud-ku wuxuu leeyahay ${remote.products} alaab, '
+                    '${remote.sales} iib.\nQalabkanna wuxuu leeyahay '
+                    '${local.products} alaab, ${local.sales} iib.')),
             const SizedBox(height: 8),
-            const Text('Pick one — the other is replaced.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF6B7688))),
+            Text(t('Pick one — the other is replaced.',
+                'Mid dooro — kan kale waa la beddelayaa.'),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7688))),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(t('Cancel', 'Jooji'))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, 'local'),
-              child: const Text('Keep this device')),
+              child: Text(t('Keep this device', 'Hay qalabkan'))),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, 'cloud'),
-              child: const Text('Use cloud')),
+              child: Text(t('Use cloud', 'Isticmaal cloud'))),
         ],
       ),
     );
@@ -143,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('Register business'),
+          title: Text(t('Register business', 'Diiwaangeli ganacsi')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -151,12 +158,12 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 TextField(
                   controller: nameC,
-                  decoration:
-                      const InputDecoration(labelText: 'Business name'),
+                  decoration: InputDecoration(
+                      labelText: t('Business name', 'Magaca ganacsiga')),
                 ),
                 const SizedBox(height: 14),
-                const Text('Plan',
-                    style: TextStyle(
+                Text(t('Plan', 'Qorshaha'),
+                    style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF6B7688))),
@@ -170,8 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onChanged: (v) => setD(() => planId = v ?? planId),
                     )),
                 const SizedBox(height: 8),
-                const Text('Industry',
-                    style: TextStyle(
+                Text(t('Industry', 'Nooca ganacsiga'),
+                    style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF6B7688))),
@@ -180,30 +187,33 @@ class _LoginScreenState extends State<LoginScreen> {
                   value: industry,
                   isExpanded: true,
                   decoration: const InputDecoration(isDense: true),
-                  items: industries.entries
-                      .map((e) => DropdownMenuItem(
-                          value: e.key, child: Text(e.value)))
+                  items: industries.keys
+                      .map((k) => DropdownMenuItem(
+                          value: k, child: Text(industryName(k))))
                       .toList(),
                   onChanged: (v) => setD(() => industry = v ?? industry),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                    'MareegTech approves new businesses before they go live.',
-                    style:
-                        TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+                Text(
+                    t(
+                        'MareegTech approves new businesses before they go live.',
+                        'MareegTech ayaa ansixiya ganacsiyada cusub ka hor inta '
+                            'aan la shaqaysiin.'),
+                    style: const TextStyle(
+                        fontSize: 11.5, color: Color(0xFF98A2B3))),
               ],
             ),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Later')),
+                child: Text(t('Later', 'Hadhow'))),
             FilledButton(
               onPressed: () {
                 if (nameC.text.trim().isEmpty) return;
                 Navigator.pop(ctx, (nameC.text.trim(), planId, industry));
               },
-              child: const Text('Submit'),
+              child: Text(t('Submit', 'Gudbi')),
             ),
           ],
         ),
@@ -248,10 +258,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: 23,
                               fontWeight: FontWeight.w800,
                               color: kNavy)),
-                      const Text('Point of Sale System',
-                          style: TextStyle(
+                      Text(t('Point of Sale System', 'Nidaamka Iibka'),
+                          style: const TextStyle(
                               fontSize: 12.5, color: Color(0xFF6B7688))),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
+                      _langToggle(),
+                      const SizedBox(height: 14),
                       _tabs(),
                       const SizedBox(height: 16),
                       if (_err.isNotEmpty)
@@ -280,6 +292,38 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _langToggle() {
+    Widget b(String label, String code) {
+      final on = store.lang == code;
+      return GestureDetector(
+        onTap: () => setState(() => store.setLang(code)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: on ? kBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: on ? Colors.white : const Color(0xFF6B7688))),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+          color: const Color(0xFFEEF1F5),
+          borderRadius: BorderRadius.circular(10)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [b('English', 'en'), b('Soomaali', 'so')],
       ),
     );
   }
@@ -317,7 +361,10 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
           color: const Color(0xFFEEF1F5),
           borderRadius: BorderRadius.circular(11)),
-      child: Row(children: [tab('Businesses', true), tab('Staff', false)]),
+      child: Row(children: [
+        tab(t('Businesses', 'Ganacsiyada'), true),
+        tab(t('Staff', 'Shaqaale'), false),
+      ]),
     );
   }
 
@@ -327,9 +374,9 @@ class _LoginScreenState extends State<LoginScreen> {
         TextField(
           controller: _email,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-              labelText: 'Business email',
-              prefixIcon: Icon(Icons.alternate_email)),
+          decoration: InputDecoration(
+              labelText: t('Business email', 'Iimaylka ganacsiga'),
+              prefixIcon: const Icon(Icons.alternate_email)),
         ),
         const SizedBox(height: 11),
         TextField(
@@ -337,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
           obscureText: _hide,
           onSubmitted: (_) => _busy ? null : _cloudGo(),
           decoration: InputDecoration(
-            labelText: 'Password',
+            labelText: t('Password', 'Furaha'),
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
                 icon: Icon(_hide ? Icons.visibility_off : Icons.visibility),
@@ -348,8 +395,9 @@ class _LoginScreenState extends State<LoginScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           dense: true,
-          title: const Text('Create a new business account',
-              style: TextStyle(fontSize: 13)),
+          title: Text(
+              t('Create a new business account', 'Samee akoon ganacsi cusub'),
+              style: const TextStyle(fontSize: 13)),
           value: _isNew,
           onChanged: _busy ? null : (v) => setState(() => _isNew = v),
         ),
@@ -364,7 +412,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : Text(_isNew ? 'Create & continue' : 'Sign in'),
+                : Text(_isNew
+                    ? t('Create & continue', 'Samee & sii wad')
+                    : t('Sign in', 'Gal')),
           ),
         ),
       ],
@@ -377,8 +427,9 @@ class _LoginScreenState extends State<LoginScreen> {
         TextField(
           controller: _user,
           textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-              labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
+          decoration: InputDecoration(
+              labelText: t('Username', 'Magaca isticmaale'),
+              prefixIcon: const Icon(Icons.person_outline)),
         ),
         const SizedBox(height: 11),
         TextField(
@@ -386,7 +437,7 @@ class _LoginScreenState extends State<LoginScreen> {
           obscureText: _hide,
           onSubmitted: (_) => _staffGo(),
           decoration: InputDecoration(
-            labelText: 'Password',
+            labelText: t('Password', 'Furaha'),
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
                 icon: Icon(_hide ? Icons.visibility_off : Icons.visibility),
@@ -396,11 +447,12 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
-          child: FilledButton(onPressed: _staffGo, child: const Text('Sign in')),
+          child: FilledButton(
+              onPressed: _staffGo, child: Text(t('Sign in', 'Gal'))),
         ),
         const SizedBox(height: 12),
-        const Text('Demo:  admin / admin123',
-            style: TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
+        Text(t('Demo:  admin / admin123', 'Tijaabo:  admin / admin123'),
+            style: const TextStyle(fontSize: 11.5, color: Color(0xFF98A2B3))),
       ],
     );
   }
