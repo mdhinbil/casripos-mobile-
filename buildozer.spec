@@ -35,13 +35,14 @@ requirements = python3,kivy==2.3.0,android
 p4a.fork = kivy
 p4a.branch = v2024.01.21
 
-orientation     = portrait
-fullscreen      = 0
-# The real rotation behaviour: android:screenOrientation="sensor" lets the app
-# fill the whole screen in BOTH landscape and portrait, following the device.
-# (p4a's `orientation` only accepts portrait/landscape; this manifest override
-# is where sensor/fullSensor/etc. belong.)
-android.manifest.orientation = sensor
+orientation     = landscape
+# Immersive fullscreen — hides the system/taskbar so the till is edge-to-edge
+# like Vektori (Vektori runs fullscreen; that's why it has no taskbar).
+fullscreen      = 1
+# Lock landscape and fill the whole tablet. (p4a's `orientation` only accepts
+# portrait/landscape; the webview manifest writes android:screenOrientation
+# from `android.manifest.orientation`, so set it here too to be sure.)
+android.manifest.orientation = landscape
 
 # ── App icon & presplash (flat navy → suppresses Kivy "Loading..." splash) ──
 icon.filename           = %(source.dir)s/assets/icon.png
