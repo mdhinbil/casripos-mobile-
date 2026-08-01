@@ -16,14 +16,12 @@ dependencies:
   # Cloud sync + backup talk to Firebase over REST, exactly as the web app does,
   # so both versions read and write the same documents during the changeover.
   http: ^1.2.1
-  # Backup export/import. v11+ inherits the app's compileSdk (36); older 8.x
-  # hardcoded its own Android module to compileSdk 34, which fails the AAR
-  # metadata check against newer transitive plugins.
-  file_picker: ^11.0.0
+  # Backup export writes a file and hands it to the share sheet. Restore takes
+  # pasted backup text (see settings_screen), so no native file-picker plugin is
+  # needed — file_picker's Android module was a recurring build-blocker.
   path_provider: ^2.1.3
-  # v10+ depends on web ^1.x, matching file_picker 11 (v9 pinned web ^0.5 and
-  # would not co-resolve). Share.shareXFiles still works (deprecated in 10.x,
-  # removed in 11.x).
+  # Share the exported backup file to WhatsApp/Drive/cable. Share.shareXFiles
+  # still works (deprecated in 10.x, removed in 11.x).
   share_plus: ^10.0.0
   intl: ^0.19.0
 

@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -40,36 +38,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Imports a backup — including one exported from the old web version, since
-  /// both write the same format. This is how a shop moves across without
-  /// losing its products and sales.
+  /// both write the same format. The backup text is pasted in directly (from a
+  /// shared file opened in any app, or from the web export), which keeps restore
+  /// dependency-free and works the same on every device.
   Future<void> _import() async {
-    final ok = await showDialog<bool>(
+    final ctrl = TextEditingController();
+    final go = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Restore from backup'),
-        content: const Text(
-            'This replaces everything on this device with the contents of the '
-            'backup file. Export a backup first if you are unsure.'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+                'Paste the contents of a backup below. This replaces everything '
+                'on this device. Export a backup first if you are unsure.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              minLines: 4,
+              maxLines: 8,
+              decoration: const InputDecoration(
+                hintText: '{ "biz": … }',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel')),
           FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Choose file')),
+              child: const Text('Restore')),
         ],
       ),
     );
-    if (ok != true) return;
+    if (go != true) return;
+    final text = ctrl.text.trim();
+    if (text.isEmpty) return;
 
     setState(() => _busy = true);
     try {
-      final res = await FilePicker.pickFiles(withData: true);
-      if (res == null || res.files.isEmpty) return;
-      final file = res.files.first;
-      final text = file.bytes != null
-          ? utf8.decode(file.bytes!)
-          : await File(file.path!).readAsString();
       final err = await store.importBackup(text);
       if (err != null) {
         _say(err);
