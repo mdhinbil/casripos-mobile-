@@ -64,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _busy = true);
     try {
-      final res = await FilePicker.platform.pickFiles(withData: true);
+      final res = await FilePicker.pickFiles(withData: true);
       if (res == null || res.files.isEmpty) return;
       final file = res.files.first;
       final text = file.bytes != null
