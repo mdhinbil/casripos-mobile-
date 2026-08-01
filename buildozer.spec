@@ -35,7 +35,7 @@ requirements = python3,kivy==2.3.0,android
 p4a.fork = kivy
 p4a.branch = v2024.01.21
 
-orientation     = all
+orientation     = sensor
 fullscreen      = 0
 
 # ── App icon & presplash (flat navy → suppresses Kivy "Loading..." splash) ──
