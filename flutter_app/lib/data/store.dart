@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import 'cloud.dart';
 
 /// Everything the till knows, held in memory and mirrored to disk.
 ///
@@ -58,6 +59,14 @@ class Store extends ChangeNotifier {
   Future<void> init() async {
     _sp = await SharedPreferences.getInstance();
     _readAll();
+    // Restore any saved cloud session and pull BEFORE deciding the device is
+    // empty — otherwise a device that persisted its session would recreate demo
+    // defaults on top of real cloud data. A fresh install has no session, so it
+    // falls through to defaults and the user re-links from Settings.
+    try {
+      final applied = await cloud.boot();
+      if (applied > 0) _readAll();
+    } catch (_) {}
     if (businesses.isEmpty) {
       businesses = [Business(id: 'b1', name: 'Casri POS')];
       currentBizId = 'b1';
@@ -127,6 +136,59 @@ class Store extends ChangeNotifier {
     // Stamp the write so cloud pull can tell whose copy is newer, exactly as
     // the web app does.
     _sp.setInt('pos_ts_$k', DateTime.now().millisecondsSinceEpoch);
+    // Mirror to the cloud (debounced; no-op when not signed in).
+    cloud.queue(k);
+  }
+
+  // ── cloud direction (called from Settings after signing in) ────────────────
+  /// Replace this device's data with what is in the cloud for this account.
+  Future<void> adoptCloudData() async {
+    for (final k in cloudKeys) {
+      await _sp.remove(k);
+      await _sp.remove('pos_ts_$k');
+    }
+    await cloud.pull(force: true);
+    _readAll();
+    _ensureDefaults();
+    notifyListeners();
+  }
+
+  /// Push everything this device has up to the (empty/new) cloud account.
+  Future<void> uploadLocalData() async {
+    await cloud.pushAll();
+  }
+
+  /// Re-read everything from disk (after a cloud pull changed it underneath us).
+  void reload() {
+    _readAll();
+    notifyListeners();
+  }
+
+  void _ensureDefaults() {
+    if (businesses.isEmpty) {
+      businesses = [Business(id: 'b1', name: 'Casri POS')];
+      currentBizId = 'b1';
+      saveBusinesses();
+    }
+    if (accounts.isEmpty) {
+      accounts = [
+        Account(id: 'a1', name: 'Admin', username: 'admin', password: 'admin123', role: 'admin'),
+        Account(id: 'a2', name: 'Cashier', username: 'cashier', password: 'cash123'),
+      ];
+      saveAccounts();
+    }
+  }
+
+  // ── plan (MPQ tier) ─────────────────────────────────────────────────────────
+  String get planId => _sp.getString('pos_plan') ?? '';
+  Plan? get plan => plans[planId];
+  set planId(String id) => _sp.setString('pos_plan', id);
+
+  /// True when the current business is already at its plan's product cap.
+  bool get productCapReached {
+    final p = plan;
+    if (p == null) return false;
+    return bizProducts.length >= p.maxProducts;
   }
 
   void saveProducts() {
