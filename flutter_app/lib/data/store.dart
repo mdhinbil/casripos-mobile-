@@ -111,6 +111,19 @@ class Store extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Actions-screen toggles ──────────────────────────────────────────────────
+  bool get barcodeMode => _sp.getBool('pos_barcode') ?? false;
+  void toggleBarcodeMode() {
+    _sp.setBool('pos_barcode', !barcodeMode);
+    notifyListeners();
+  }
+
+  /// Reset the running order number back to zero.
+  void resetOrderNumber() {
+    _sp.setInt('pos_order_seq', 0);
+    notifyListeners();
+  }
+
   List<Map<String, dynamic>> _readList(String k) {
     try {
       final raw = _sp.getString(k);
