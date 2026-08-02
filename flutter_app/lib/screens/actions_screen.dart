@@ -224,6 +224,34 @@ class _ActionsScreenState extends State<ActionsScreen> {
     }
   }
 
+  Future<void> _loadSamples() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(t('Reset to sample data', 'Dib u deji xogta tusaalaha')),
+        content: Text(t(
+            'Replace this business with ${industryName(store.biz.type)} starter '
+                'products and clear ALL its sales? This cannot be undone.',
+            'Ku beddel ganacsigan alaab bilow ah oo ${industryName(store.biz.type)} '
+                'oo tirtir DHAMMAAN iibkiisa? Tan lama soo celin karo.')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(t('Cancel', 'Jooji'))),
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFD63B3B)),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(t('Reset', 'Dib u deji'))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    store.seedIndustryProducts(store.biz.type);
+    store.clearBusinessTransactions();
+    _say(t('Business reset to samples', 'Ganacsiga waa la dejiyay'));
+  }
+
   Future<void> _resetOrderNumber() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -297,6 +325,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
       }),
       _Action(t('Update products', 'Cusboonaysii alaabta'), '', Icons.sync,
           _updateProducts),
+      _Action(t('Load sample products', 'Soo geli alaab tusaale'),
+          industryName(store.biz.type), Icons.auto_awesome, _loadSamples),
       _Action(t('Log', 'Diiwaanka'), '', Icons.history,
           () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const LogScreen()))),
