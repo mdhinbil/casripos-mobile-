@@ -245,6 +245,18 @@ class Store extends ChangeNotifier {
     saveProducts();
   }
 
+  /// Clear leftover demo sales, invoices and the activity log so a newly
+  /// registered business starts from zero. Runs only at registration.
+  void clearBusinessTransactions() {
+    sales.removeWhere((s) => s.bizId == currentBizId);
+    invoices.removeWhere((i) => i.bizId == currentBizId);
+    logs = [];
+    saveSales();
+    saveInvoices();
+    _write(kLog, const []);
+    notifyListeners();
+  }
+
   // (name, category, icon, price) starter sets per industry.
   List<(String, String, String, double)> _starterProducts(String industry) {
     switch (industry) {
