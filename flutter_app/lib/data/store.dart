@@ -224,6 +224,85 @@ class Store extends ChangeNotifier {
     saveBusinesses();
   }
 
+  /// Replace the current business's products with a starter set that matches the
+  /// chosen industry. Called at registration so a retail shop gets retail items,
+  /// a cafe gets coffees, etc. — instead of leftover demo products.
+  void seedIndustryProducts(String industry) {
+    products.removeWhere((p) => p.bizId == currentBizId);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    var i = 0;
+    for (final s in _starterProducts(industry)) {
+      products.add(Product(
+        id: 'p${now}_${i++}',
+        bizId: currentBizId,
+        name: s.$1,
+        cat: s.$2,
+        icon: s.$3,
+        price: s.$4,
+        stock: 50,
+      ));
+    }
+    saveProducts();
+  }
+
+  // (name, category, icon, price) starter sets per industry.
+  List<(String, String, String, double)> _starterProducts(String industry) {
+    switch (industry) {
+      case 'restaurant':
+        return const [
+          ('Rice & Meat', 'Main', '🍛', 5.00),
+          ('Pasta', 'Main', '🍝', 4.00),
+          ('Grilled Chicken', 'Main', '🍗', 6.00),
+          ('Fish', 'Main', '🐟', 6.50),
+          ('Salad', 'Sides', '🥗', 2.00),
+          ('Soup', 'Sides', '🍲', 2.50),
+          ('Soft Drink', 'Drinks', '🥤', 1.00),
+          ('Water', 'Drinks', '💧', 0.50),
+          ('Tea', 'Drinks', '🍵', 0.75),
+          ('Fresh Juice', 'Drinks', '🧃', 1.50),
+        ];
+      case 'cafe':
+        return const [
+          ('Espresso', 'Coffee', '☕', 1.50),
+          ('Cappuccino', 'Coffee', '☕', 2.00),
+          ('Latte', 'Coffee', '☕', 2.20),
+          ('Tea', 'Hot', '🍵', 1.00),
+          ('Cake Slice', 'Bakery', '🍰', 2.50),
+          ('Sandwich', 'Food', '🥪', 3.00),
+          ('Croissant', 'Bakery', '🥐', 1.80),
+          ('Cookie', 'Bakery', '🍪', 0.80),
+          ('Water', 'Drinks', '💧', 0.50),
+          ('Fresh Juice', 'Drinks', '🧃', 1.50),
+        ];
+      case 'bar':
+        return const [
+          ('Mango Juice', 'Juice', '🥭', 2.00),
+          ('Orange Juice', 'Juice', '🍊', 1.80),
+          ('Avocado Juice', 'Juice', '🥑', 2.50),
+          ('Mixed Juice', 'Juice', '🧃', 2.20),
+          ('Milkshake', 'Shakes', '🥤', 2.50),
+          ('Spiced Tea', 'Tea', '🍵', 1.00),
+          ('Black Tea', 'Tea', '🍵', 0.75),
+          ('Coffee', 'Hot', '☕', 1.20),
+          ('Water', 'Drinks', '💧', 0.50),
+          ('Smoothie', 'Shakes', '🥤', 3.00),
+        ];
+      default: // shop / retail
+        return const [
+          ('Water 500ml', 'Drinks', '💧', 0.50),
+          ('Soft Drink', 'Drinks', '🥤', 0.75),
+          ('Rice 1kg', 'Grocery', '🍚', 1.50),
+          ('Sugar 1kg', 'Grocery', '🧂', 1.20),
+          ('Cooking Oil 1L', 'Grocery', '🛢️', 2.50),
+          ('Bread', 'Bakery', '🍞', 0.80),
+          ('Milk 1L', 'Dairy', '🥛', 1.10),
+          ('Soap', 'Household', '🧼', 0.60),
+          ('Biscuits', 'Snacks', '🍪', 0.40),
+          ('Tissue', 'Household', '🧻', 0.90),
+        ];
+    }
+  }
+
   // ── plan (MPQ tier) ─────────────────────────────────────────────────────────
   String get planId => _sp.getString('pos_plan') ?? '';
   Plan? get plan => plans[planId];

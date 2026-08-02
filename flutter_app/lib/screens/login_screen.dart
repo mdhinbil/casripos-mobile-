@@ -82,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final reg = await _askRegister();
         if (reg != null) {
           store.applyBusinessProfile(reg.$1, reg.$3); // name + industry
+          store.seedIndustryProducts(reg.$3); // starter products for industry
           await cloud.registerWorkspace(reg.$1, reg.$2);
           store.planId = reg.$2;
           await cloud.refreshWorkspace();

@@ -81,6 +81,7 @@ class _CloudSectionState extends State<CloudSection> {
         final reg = await _askRegister();
         if (reg != null) {
           store.applyBusinessProfile(reg.name, reg.industry);
+          store.seedIndustryProducts(reg.industry);
           await cloud.registerWorkspace(reg.name, reg.plan);
           store.planId = reg.plan;
           await cloud.refreshWorkspace();
