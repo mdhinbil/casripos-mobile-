@@ -62,6 +62,12 @@ jobs:
         working-directory: flutter_app
         run: flutter pub get
 
+      # Replace flutter create's default launcher icon with the Casri POS brand
+      # icon (assets/icon.png) on every build, since android/ is regenerated.
+      - name: Generate launcher icons
+        working-directory: flutter_app
+        run: dart run flutter_launcher_icons
+
       # Catches real mistakes (bad types, missing imports) with a clear message,
       # rather than letting them surface as a confusing Gradle failure.
       - name: Analyze
