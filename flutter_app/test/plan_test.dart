@@ -100,11 +100,8 @@ void main() {
       }
     });
 
-    // NOT YET ENFORCED. There is no screen in this app for adding a cashier -
-    // accounts arrive from the store and sign-in matches against them - so
-    // there is nothing here to refuse. The web app enforces it where cashiers
-    // are created. When a staff screen lands here, the rule to copy is:
-    // count ACTIVE accounts with role 'cashier' scoped to the current business,
-    // and refuse the next one at plan.registers.
-  }, skip: 'no staff screen in the native app yet - see the note above');
+    // The cap itself is enforced in Store.saveStaff and proved in
+    // staff_test.dart, where the refusals live. It used to be enforced nowhere
+    // because there was no screen for adding a cashier; there is now.
+  });
 }

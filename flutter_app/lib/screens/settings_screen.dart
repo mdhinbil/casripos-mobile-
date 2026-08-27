@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../main.dart';
 import '../data/cloud.dart';
 import 'cloud_section.dart';
+import 'staff_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -149,6 +150,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 14),
           _SectionLabel(t('Cloud & business', 'Cloud & ganacsi')),
           const CloudSection(),
+          const SizedBox(height: 14),
+          _SectionLabel(t('People who sign in', 'Dadka gala')),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.group_outlined, color: kBlue),
+              title: Text(t('People who sign in', 'Dadka gala')),
+              // How many tills are in use, said on the way in rather than
+              // after somebody presses Add and is turned away.
+              subtitle: Text(store.registerLimit == 0
+                  ? '${store.bizStaff.length} ${t('accounts', 'akoon')}'
+                  : '${store.registersUsed}/${store.registerLimit} '
+                      '${t('cash registers used', 'rijistar la isticmaalay')}'
+                      ' · ${store.bizStaff.length} ${t('accounts', 'akoon')}'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const StaffScreen()));
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
           const SizedBox(height: 14),
           _SectionLabel(t('Backup & restore', 'Kaydinta & soo celinta')),
           Card(

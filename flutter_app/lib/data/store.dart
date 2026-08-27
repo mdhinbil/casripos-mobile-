@@ -348,6 +348,177 @@ class Store extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  // ── people who sign in ────────────────────────────────────
+  //
+  // The MPQ plan pays for a number of cash registers, and a register is a
+  // cashier login. So this is not housekeeping - it is the thing the shop is
+  // being charged for, and every refusal below is worth more than the screen
+  // that shows it.
+
+  /// Which business an account belongs to when counting against the plan.
+  ///
+  /// Matched to the web app deliberately: it counts accounts pinned to this
+  /// business, and leaves the shared logins that came with a fresh install out
+  /// of it. A shop that runs both versions must not find the same plan allows
+  /// a different number of tills in each.
+  String _scopeId() =>
+      (user?.bizId.isNotEmpty ?? false) ? user!.bizId : currentBizId;
+
+  /// The people this business can see and edit.
+  List<Account> get bizStaff {
+    final scope = _scopeId();
+    return accounts
+        .where((a) => a.bizId.isEmpty || a.bizId == scope)
+        .toList()
+      ..sort((a, b) => a.username.toLowerCase().compareTo(b.username.toLowerCase()));
+  }
+
+  /// How many cash registers the plan pays for. 0 means no plan has been put on
+  /// this shop yet, and then nothing is capped - see productCapReached.
+  int get registerLimit => plan?.registers ?? 0;
+
+  /// Cashier logins already in use for this business.
+  int get registersUsed {
+    final scope = _scopeId();
+    return accounts
+        .where((a) => a.active && a.role == 'cashier' && a.bizId == scope)
+        .length;
+  }
+
+  bool get registerCapReached =>
+      registerLimit > 0 && registersUsed >= registerLimit;
+
+  /// Is the signed-in person allowed to manage staff at all?
+  bool get canManageStaff => user?.role == 'admin';
+
+  /// Add or change somebody who signs in.
+  ///
+  /// Takes fields rather than an Account so a screen can never hand us an
+  /// object it has already mutated - a refused edit must leave what is stored
+  /// exactly as it was, and it cannot do that if the screen changed it first.
+  ///
+  /// Returns an error to show, or null.
+  String? saveStaff({
+    required String id,
+    required String name,
+    required String username,
+    required String role,
+    String password = '',
+    bool active = true,
+  }) {
+    if (!canManageStaff) {
+      return t2('Only an administrator can add or change who signs in.',
+          'Maamulaha oo keliya ayaa ku dari kara ama beddeli kara cida gasha.');
+    }
+
+    final user0 = username.trim();
+    if (user0.length < 3) {
+      return t2('A username needs at least three letters.',
+          'Magaca isticmaaluhu wuxuu u baahan yahay ugu yaraan saddex xaraf.');
+    }
+    final clash = accounts.any((a) =>
+        a.id != id && a.username.toLowerCase() == user0.toLowerCase());
+    if (clash) {
+      return t2('That username is taken.', 'Magacaas waa la qaatay.');
+    }
+
+    // What is on the books right now - never what the screen is holding.
+    final stored = accounts.where((a) => a.id == id).toList();
+    final existing = stored.isEmpty ? null : stored.first;
+
+    if (existing == null && password.trim().length < 4) {
+      return t2('Give them a password of at least four characters.',
+          'Sii furaha sirta oo ugu yaraan afar xaraf ah.');
+    }
+    if (existing != null &&
+        password.isNotEmpty &&
+        password.trim().length < 4) {
+      return t2('A password needs at least four characters.',
+          'Furaha sirtu wuxuu u baahan yahay ugu yaraan afar xaraf.');
+    }
+
+    // The plan cap. Only ever checked when a NEW cashier login appears or a
+    // switched-off one comes back - editing the name of one that already
+    // counts must not be refused for being over a limit it is already inside.
+    final becomesCashier = role == 'cashier' && active;
+    final countedBefore =
+        existing != null && existing.role == 'cashier' && existing.active;
+    if (becomesCashier && !countedBefore && registerCapReached) {
+      final n = registerLimit;
+      return t2(
+          'Your ${plan!.id} plan allows $n cash register${n > 1 ? 's' : ''}. '
+              'Switch one off, or move up a plan.',
+          'Qorshahaaga ${plan!.id} wuxuu ogol yahay $n rijistar. '
+              'Mid dami, ama qorshaha kor u qaad.');
+    }
+
+    // The shop must never be left with nobody who can get in.
+    if (existing != null && existing.role == 'admin') {
+      final lastAdmin = accounts
+              .where((a) => a.active && a.role == 'admin' && a.id != id)
+              .isEmpty;
+      if (lastAdmin && (role != 'admin' || !active)) {
+        return t2(
+            'This is the only administrator. Make somebody else an '
+                'administrator first.',
+            'Kanu waa maamulaha kaliya. Marka hore qof kale maamul ka dhig.');
+      }
+    }
+
+    if (existing == null) {
+      accounts.add(Account(
+        id: 'u${DateTime.now().microsecondsSinceEpoch}',
+        name: name.trim().isEmpty ? user0 : name.trim(),
+        username: user0,
+        password: password.trim(),
+        role: role,
+        // New logins are pinned to this business, so one shop's cashier can
+        // never ring up sales against another's takings.
+        bizId: _scopeId(),
+        active: active,
+      ));
+    } else {
+      existing.name = name.trim().isEmpty ? user0 : name.trim();
+      existing.username = user0;
+      existing.role = role;
+      existing.active = active;
+      // A blank box means "leave the password alone". Writing it through would
+      // wipe a working password every time somebody fixed a spelling.
+      if (password.isNotEmpty) existing.password = password.trim();
+    }
+    saveAccounts();
+    log('staff saved: $user0');
+    return null;
+  }
+
+  /// Remove somebody. Refuses the last administrator and refuses you.
+  String? removeStaff(String id) {
+    if (!canManageStaff) {
+      return t2('Only an administrator can add or change who signs in.',
+          'Maamulaha oo keliya ayaa ku dari kara ama beddeli kara cida gasha.');
+    }
+    if (user?.id == id) {
+      return t2('You cannot remove the account you are signed in with.',
+          'Ma tirtiri kartid akoonka aad ku gashay.');
+    }
+    final stored = accounts.where((a) => a.id == id).toList();
+    if (stored.isEmpty) return null;
+    if (stored.first.role == 'admin' &&
+        accounts.where((a) => a.active && a.role == 'admin' && a.id != id).isEmpty) {
+      return t2('This is the only administrator, so it cannot be removed.',
+          'Kanu waa maamulaha kaliya, sidaas darteed lama tirtiri karo.');
+    }
+    accounts.removeWhere((a) => a.id == id);
+    saveAccounts();
+    log('staff removed');
+    return null;
+  }
+
+  /// The store's own words, in the shop's language. main.dart's t() reads the
+  /// same setting, but the store must not depend on a screen file.
+  String t2(String en, String so) => lang == 'so' ? so : en;
+
   void saveAccounts() {
     _write(kAccounts, accounts.map((e) => e.toJson()).toList());
     notifyListeners();
