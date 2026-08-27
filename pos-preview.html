@@ -1,0 +1,131 @@
+<title>Casri POS — new tablet layout</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#eef1f5;color:#0a1628;padding:14px}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .topbar .menuBtn{background:#1a6ef5;border:none;color:#fff;font-size:20px;line-height:1;padding:7px 13px;border-radius:8px;cursor:pointer;box-shadow:0 2px 6px rgba(26,110,245,.35)}
+  .topbar .t{font-size:18px;font-weight:800}
+  .topbar .biz{margin-left:auto;font-size:13px;color:#5c6b82}
+  .topbar .lang{display:flex;gap:6px}
+  .topbar .lang b{font-size:12px;font-weight:800;padding:5px 11px;border-radius:7px;background:#eaeef4;color:#33415c}
+  .topbar .lang b.on{background:#1a6ef5;color:#fff}
+  .posWrap{display:grid;grid-template-columns:1fr 340px;gap:0;height:calc(100vh - 90px)}
+  .posLeft{display:flex;flex-direction:column;gap:11px;overflow:hidden;padding-right:14px}
+  .posSearch{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .posSearch input{flex:1;min-width:160px;padding:9px 13px;border:1.5px solid #dbe2ec;border-radius:9px;font-size:13px}
+  .catChip{padding:9px 17px;border-radius:12px;background:#fff;color:var(--cc,#33415c);border:2px solid var(--cc,#dbe2ec);cursor:pointer;font-size:13px;font-weight:800;white-space:nowrap}
+  .catChip.on{background:var(--cc,#1a6ef5);color:#fff;box-shadow:0 3px 8px rgba(10,22,40,.22)}
+  .prodGrid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding-right:4px;align-content:start}
+  .prodC{position:relative;background:var(--pc,#1a6ef5);border:none;border-radius:12px;padding:9px 10px;min-height:72px;cursor:pointer;transition:transform .1s,box-shadow .15s;display:flex;flex-direction:column;justify-content:space-between;gap:4px;color:#fff;box-shadow:0 1px 3px rgba(10,22,40,.18);overflow:hidden}
+  .prodC:hover{box-shadow:0 7px 16px rgba(10,22,40,.30);transform:translateY(-2px)}
+  .prodC .pNm{font-size:12.5px;font-weight:700;color:#fff;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .prodC .pEm{font-size:13px}
+  .prodC .pPr{font-size:15px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.18)}
+  .prodC .pQty{position:absolute;top:0;right:0;background:rgba(0,0,0,.42);color:#fff;font-size:11px;font-weight:800;min-width:22px;text-align:center;padding:2px 6px;border-radius:0 12px 0 11px}
+  .prodC .pLow{position:absolute;top:6px;left:7px;background:rgba(0,0,0,.32);color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:20px}
+  .posRight{background:#fff;border:none;border-left:1px solid #e6eaf0;border-radius:0;display:flex;flex-direction:column;overflow:hidden}
+  .posCartH{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#0a1628;color:#fff}
+  .posCartH .ttl{font-weight:800;font-size:14px}
+  .posCartH .clr{background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer}
+  .tables{padding:10px 14px;background:#fff7d6;border-bottom:1px solid #ffe7a3;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tables label{font-size:9px;color:#8a6d1a;font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px}
+  .tables input,.tables select{width:100%;padding:5px 8px;font-size:12px;border:1px solid #e6d59a;border-radius:6px}
+  .posCartList{flex:1;overflow-y:auto;padding:6px 11px}
+  .cartTbl{width:100%;border-collapse:collapse;font-size:13px}
+  .cartTbl thead th{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#8a93a3;font-weight:800;text-align:left;padding:7px 5px;border-bottom:1.5px solid #e6eaf0}
+  .cartTbl th.c{text-align:center}.cartTbl th.r{text-align:right}
+  .cartTbl td{padding:8px 5px;border-bottom:1px solid #f0f2f6;vertical-align:middle}
+  .cartTbl td.r{text-align:right}
+  .cartTbl .ctNm{font-weight:700;color:#0a1628}
+  .cartTbl .ctP{color:#5c6b82;white-space:nowrap}
+  .cartTbl .ctT{font-weight:800;color:#1152cc;white-space:nowrap}
+  .cartTbl .ctQ{white-space:nowrap;text-align:center}
+  .qtyBtn{width:24px;height:24px;border:1px solid #dbe2ec;background:#f5f7fa;border-radius:7px;font-weight:800;color:#33415c;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+  .qtyVal{display:inline-block;min-width:18px;text-align:center;font-weight:800;font-size:13px;vertical-align:middle;margin:0 2px}
+  .cartRm{background:none;border:none;color:#bf2600;font-size:14px;cursor:pointer;opacity:.6}
+  .posSum{padding:12px 16px;border-top:1px solid #eef1f5}
+  .sumRow{display:flex;justify-content:space-between;font-size:13px;color:#5c6b82;padding:2px 0}
+  .sumRow.tot{font-size:19px;font-weight:800;color:#0a1628;margin-top:6px}
+  .posCheckout{padding:12px 14px}
+  .btnG{width:100%;background:#22a06b;color:#fff;border:none;border-radius:11px;padding:15px;font-size:16px;font-weight:800;cursor:pointer}
+  .note{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#7c8aa0;background:#fff;padding:4px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+</style>
+
+<div class="topbar">
+  <button class="menuBtn">&#9776;</button>
+  <div class="t">Casri POS</div>
+  <div class="biz">Demo Restaurant · Cashier</div>
+  <div class="lang"><b class="on">EN</b><b>SO</b></div>
+</div>
+
+<div class="posWrap">
+  <div class="posLeft">
+    <div class="posSearch">
+      <input placeholder="Search products…">
+      <span id="chips"></span>
+    </div>
+    <div class="prodGrid" id="grid"></div>
+  </div>
+
+  <div class="posRight">
+    <div class="posCartH"><div class="ttl">🛒 Cart (5)</div><button class="clr">✕ Clear</button></div>
+    <div class="tables">
+      <div><label>Table</label><input value="5"></div>
+      <div><label>Order type</label><select><option>Dine-in</option><option>Takeaway</option></select></div>
+    </div>
+    <div class="posCartList" id="cart"></div>
+    <div class="posSum">
+      <div class="sumRow"><span>Items</span><span>21</span></div>
+      <div class="sumRow"><span>Subtotal</span><span>$84.00</span></div>
+      <div class="sumRow tot"><span>Total</span><span>$84.00</span></div>
+    </div>
+    <div class="posCheckout"><button class="btnG">💵 Checkout</button></div>
+  </div>
+</div>
+
+<div class="note">Preview of the new tablet POS · colored tiles by category</div>
+
+<script>
+  var PAL=["#1a6ef5","#0091ae","#2e9e63","#e0842b","#e0503f","#6554c0","#c2185b","#00897b","#7e57c2","#3949ab","#d81b60","#00838f"];
+  function catColor(c){var s=(c||"x")+"",n=5;for(var i=0;i<s.length;i++)n=(n*33+s.charCodeAt(i))>>>0;return PAL[n%PAL.length];}
+  var items=[
+    {n:"Beef Burger",p:8.50,c:"Mains",e:"🍔",q:0},
+    {n:"Chicken Wrap",p:6.75,c:"Mains",e:"🌯",q:0},
+    {n:"Margherita Pizza",p:12.00,c:"Mains",e:"🍕",q:0},
+    {n:"Grilled Salmon",p:14.00,c:"Mains",e:"🐟",q:1},
+    {n:"Caesar Salad",p:7.50,c:"Salads",e:"🥗",q:0},
+    {n:"Greek Salad",p:7.00,c:"Salads",e:"🥙",q:0},
+    {n:"French Fries",p:3.00,c:"Sides",e:"🍟",q:0},
+    {n:"Onion Rings",p:3.50,c:"Sides",e:"🧅",q:11},
+    {n:"Garlic Bread",p:2.50,c:"Sides",e:"🥖",q:0},
+    {n:"Mango Juice",p:3.00,c:"Drinks",e:"🥭",q:3},
+    {n:"Lemonade",p:2.50,c:"Drinks",e:"🍋",q:1},
+    {n:"Cola",p:2.00,c:"Drinks",e:"🥤",q:0},
+    {n:"Iced Tea",p:2.25,c:"Drinks",e:"🧊",q:0},
+    {n:"Ice Cream",p:4.00,c:"Desserts",e:"🍦",q:5},
+    {n:"Cheesecake",p:4.50,c:"Desserts",e:"🍰",q:0},
+    {n:"Brownie",p:3.75,c:"Desserts",e:"🍫",q:0}
+  ];
+  document.getElementById("grid").innerHTML=items.map(function(p){
+    var qb=p.q?'<span class="pQty">'+p.q+'</span>':'';
+    return '<div class="prodC" style="--pc:'+catColor(p.c)+'">'+qb+
+      '<div class="pNm"><span class="pEm">'+p.e+'</span> '+p.n+'</div>'+
+      '<div class="pPr">$'+p.p.toFixed(2)+'</div></div>';
+  }).join("");
+  var CATS=["All","Mains","Salads","Sides","Drinks","Desserts"];
+  document.getElementById("chips").innerHTML=CATS.map(function(c,i){
+    var col=c==="All"?"#1a6ef5":catColor(c);
+    return '<button class="catChip'+(i===0?' on':'')+'" style="--cc:'+col+'">'+c+'</button>';
+  }).join("");
+  var cart=[["Ice Cream",4.00,5,20.00],["Onion Rings",3.50,11,38.50],["Grilled Salmon",14.00,1,14.00],["Mango Juice",3.00,3,9.00],["Lemonade",2.50,1,2.50]];
+  document.getElementById("cart").innerHTML=
+    '<table class="cartTbl"><thead><tr><th>Product</th><th class="c">Qty</th><th class="r">Price</th><th class="r">Total</th><th></th></tr></thead><tbody>'+
+    cart.map(function(c){
+      return '<tr><td class="ctNm">'+c[0]+'</td>'+
+        '<td class="ctQ"><button class="qtyBtn">&minus;</button><span class="qtyVal">'+c[2]+'</span><button class="qtyBtn">+</button></td>'+
+        '<td class="r ctP">$'+c[1].toFixed(2)+'</td>'+
+        '<td class="r ctT">$'+c[3].toFixed(2)+'</td>'+
+        '<td class="r"><button class="cartRm">&#128465;</button></td></tr>';
+    }).join("")+'</tbody></table>';
+</script>

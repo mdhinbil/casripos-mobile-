@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // ============================================================
-//  Firestore rules — Isguul AND Casri POS share one project.
+//  Firestore rules — Isguul, Casri POS, Dawaar Kaab and I kireyso
+//  all share one project.
 //  Paste this WHOLE file into:
 //    Firebase Console → Firestore Database → Rules → Publish
 //
@@ -55,6 +56,35 @@ service cloud.firestore {
     }
     match /isguul/{ns} {
       allow read:  if isAuthed();
+      allow write: if false;
+    }
+
+    // -- Dawaar Kaab ---------------------------------------------
+    // One document holds the whole shop book, pinned to the shop's own uid.
+    // Does NOT use validDataWrite(): that wants a `v` field, which is Isguul's
+    // and Casri POS's shape. Ours carries `book` and `at`.
+    match /dawaarkaab/{uid}/book/{doc} {
+      allow read:           if isAuthed() && request.auth.uid == uid;
+      allow create, update: if isAuthed() && request.auth.uid == uid
+                            && request.resource.data.book is string
+                            && request.resource.data.book.size() < 900000;
+      allow delete:         if false;
+    }
+    match /dawaarkaab/{uid} {
+      allow read:  if isAuthed() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // -- I kireyso -----------------------------------------------
+    match /ikireyso/{uid}/book/{doc} {
+      allow read:           if isAuthed() && request.auth.uid == uid;
+      allow create, update: if isAuthed() && request.auth.uid == uid
+                            && request.resource.data.book is string
+                            && request.resource.data.book.size() < 900000;
+      allow delete:         if false;
+    }
+    match /ikireyso/{uid} {
+      allow read:  if isAuthed() && request.auth.uid == uid;
       allow write: if false;
     }
 
