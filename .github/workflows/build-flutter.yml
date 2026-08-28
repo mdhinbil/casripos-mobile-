@@ -1,7 +1,14 @@
 name: Build Casri POS (Flutter)
 
-# The native rewrite. Runs alongside the existing WebView build, which stays
-# the shipping app until this one is proven.
+# The native rewrite. Runs alongside the existing WebView build.
+#
+# Produces what a paying shop installs:
+#   CasriPOS-<n>.apk            Android, release, signed, split per ABI
+#   CasriPOS-windows-<n>.zip    a folder to unzip on the counter PC
+#
+# The signing key is the Play Store UPLOAD KEY, the same one build-apk.yml
+# uses, kept only in GitHub secrets. An APK signed with a different key cannot
+# be installed over one already on a phone, so both builds must use this one.
 on:
   push:
     branches: [main, master]
@@ -74,37 +81,167 @@ jobs:
         working-directory: flutter_app
         run: flutter analyze --no-fatal-infos
 
-      - name: Build debug APK
+      # The caps in these tests are what the $10, $20 and $30 plans buy. A
+      # build that ships them broken is a build that sells three prices for one
+      # thing.
+      - name: Test
         working-directory: flutter_app
-        run: flutter build apk --debug
+        run: flutter test
 
-      - name: Rename artifact
+      - name: Decode the upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 is missing. See the comment at the top."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > $HOME/casri-upload.keystore
+
+      # Gradle reads key.properties, which is written here rather than kept in
+      # the repo - android/ is regenerated on every run and a keystore password
+      # must never be committed.
+      - name: Point Gradle at the key
+        working-directory: flutter_app
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=$KS_PASS
+          keyPassword=$KEY_PASS
+          keyAlias=$KEY_ALIAS
+          storeFile=$HOME/casri-upload.keystore
+          EOF
+          python3 tool/wire_release_signing.py
+          grep -n "signingConfig" android/app/build.gradle.kts
+
+      # Release, and split per ABI. A universal debug APK was 155 MB; release
+      # strips the debug machinery and the split leaves out the other
+      # processor's code, which is most of what a shop was being asked to
+      # download over a phone connection.
+      - name: Build the release APKs
+        working-directory: flutter_app
+        run: flutter build apk --release --split-per-abi
+
+      - name: Name them, and prove they are signed with OUR key
         working-directory: flutter_app
         run: |
           mkdir -p out
-          cp build/app/outputs/flutter-apk/app-debug.apk out/CasriPOS-native-debug.apk
+          N="${GITHUB_RUN_NUMBER}"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+             "out/CasriPOS-$N.apk"
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+             "out/CasriPOS-$N-arm32.apk" 2>/dev/null || true
+          APKSIGNER=$(ls $ANDROID_HOME/build-tools/*/apksigner | tail -1)
+          "$APKSIGNER" verify --print-certs "out/CasriPOS-$N.apk" | head -4
+          # A release APK signed with the debug key would install today and be
+          # rejected by Play tomorrow, so fail the build rather than ship it.
+          if "$APKSIGNER" verify --print-certs "out/CasriPOS-$N.apk" \
+               | grep -qi "CN=Android Debug"; then
+            echo "::error::That APK is signed with the DEBUG key."
+            exit 1
+          fi
           ls -lh out/
 
       - uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: casripos-native-apk
-          path: flutter_app/out/CasriPOS-native-debug.apk
+          path: flutter_app/out/*.apk
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Publish to GitHub Releases
-        if: success()
-        uses: softprops/action-gh-release@v2
+  # ── the counter PC ──────────────────────────────────────────────────────
+  #
+  # A till is as often a Windows machine as a phone. Same codebase, same caps;
+  # this only has to be built on Windows because that is where the toolchain
+  # lives.
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate the Windows project
+        working-directory: flutter_app
+        run: |
+          flutter create --platforms=windows --org com.casri --project-name casripos .
+          git checkout -- test/
+
+      - name: Get packages
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Build
+        working-directory: flutter_app
+        run: flutter build windows --release
+
+      # Windows shows the .exe name in the taskbar and on the shortcut, and
+      # `flutter create` names it after the package - "casripos". A shop should
+      # see the product, so rename it. CMake target names may not contain a
+      # space, which is why this is a rename here rather than a BINARY_NAME.
+      - name: Name it after the product, and check it is whole
+        working-directory: flutter_app
+        shell: bash
+        run: |
+          R=build/windows/x64/runner/Release
+          test -f "$R/casripos.exe" || { echo "::error::no exe"; ls -la "$R"; exit 1; }
+          mv "$R/casripos.exe" "$R/Casri POS.exe"
+          # A Flutter Windows build is the exe, its DLL and the assets folder.
+          # Any one of them missing is a folder that opens to nothing.
+          test -f "$R/flutter_windows.dll" || { echo "::error::no flutter_windows.dll"; exit 1; }
+          test -d "$R/data/flutter_assets" || { echo "::error::no flutter_assets"; exit 1; }
+          mkdir -p out
+          # Zipped from INSIDE Release so the archive opens straight onto the
+          # exe rather than five nested folders. The path back out is fixed by
+          # Flutter's own layout; if that ever changes, the check below fails
+          # the build instead of publishing an empty release.
+          Z="CasriPOS-windows-${GITHUB_RUN_NUMBER}.zip"
+          (cd "$R" && 7z a -tzip "../../../../../out/$Z" . >/dev/null)
+          test -s "out/$Z" || { echo "::error::the zip was not written"; exit 1; }
+          # And it must contain the three things that make it run.
+          for f in "Casri POS.exe" flutter_windows.dll data/flutter_assets/AssetManifest.json; do
+            7z l "out/$Z" | grep -q "$(basename "$f")" || {
+              echo "::error::$f is missing from the zip"; exit 1; }
+          done
+          ls -lh out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: casripos-windows
+          path: flutter_app/out/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── one release carrying both ───────────────────────────────────────────
+  release:
+    needs: [build, windows]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dl }
+      - run: ls -lhR dl
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: native-v${{ github.run_number }}
           name: Casri POS NATIVE build ${{ github.run_number }}
+          files: |
+            dl/casripos-native-apk/*.apk
+            dl/casripos-windows/*.zip
           body: |
-            Native Flutter build (preview — the WebView app is still the shipping one).
+            Native Casri POS, release builds.
 
-            Installs alongside the current app, so you can compare them.
-            To move your data across: export a backup from the old app,
-            then Settings > Import backup here.
-          files: flutter_app/out/CasriPOS-native-debug.apk
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fail_on_unmatched_files: false
+            * `CasriPOS-${{ github.run_number }}.apk` - Android (64-bit, most phones)
+            * `CasriPOS-${{ github.run_number }}-arm32.apk` - older 32-bit phones
+            * `CasriPOS-windows-${{ github.run_number }}.zip` - unzip on the counter
+              PC and double-click **Casri POS**
+
+            Signed with the Play upload key, so it installs over a previous
+            build rather than refusing.
+          generate_release_notes: false
