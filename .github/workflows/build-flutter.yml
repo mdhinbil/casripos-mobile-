@@ -206,8 +206,11 @@ jobs:
           (cd "$R" && 7z a -tzip "../../../../../out/$Z" . >/dev/null)
           test -s "out/$Z" || { echo "::error::the zip was not written"; exit 1; }
           # And it must contain the three things that make it run.
-          for f in "Casri POS.exe" flutter_windows.dll data/flutter_assets/AssetManifest.json; do
-            7z l "out/$Z" | grep -q "$(basename "$f")" || {
+          # Named files inside flutter_assets get renamed between Flutter
+          # versions - AssetManifest.json became AssetManifest.bin - so check
+          # for the things that do not move.
+          for f in "Casri POS.exe" flutter_windows.dll icudtl.dat flutter_assets; do
+            7z l "out/$Z" | grep -q "$f" || {
               echo "::error::$f is missing from the zip"; exit 1; }
           done
           ls -lh out/
