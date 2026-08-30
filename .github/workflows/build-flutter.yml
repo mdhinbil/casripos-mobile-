@@ -88,6 +88,15 @@ jobs:
         working-directory: flutter_app
         run: flutter test
 
+      # `flutter create` puts INTERNET in the debug and profile manifests only.
+      # Without this the release APK cannot reach Firebase, so a shop can never
+      # sign in to its workspace - and the MPQ plan, and its caps, never arrive.
+      - name: Let the release build reach the cloud
+        working-directory: flutter_app
+        run: |
+          python3 tool/android_internet.py
+          grep -q INTERNET android/app/src/main/AndroidManifest.xml
+
       - name: Decode the upload keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -143,6 +152,9 @@ jobs:
             echo "::error::That APK is signed with the DEBUG key."
             exit 1
           fi
+          # Patching the manifest before the build is not proof it survived
+          # into the apk. This reads the finished one.
+          python3 tool/check_apk_internet.py "out/CasriPOS-$N.apk"
           ls -lh out/
 
       - uses: actions/upload-artifact@v4
