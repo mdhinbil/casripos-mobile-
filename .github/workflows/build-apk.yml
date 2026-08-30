@@ -166,7 +166,10 @@ jobs:
             bin/CasriPOS-debug.apk
             bin/*.aab
           if-no-files-found: warn
-          retention-days: 30
+          # One day: this copy only has to survive until the release job
+          # picks it up. The Release keeps the file, and does not count
+          # against Actions storage.
+          retention-days: 1
 
       # GitHub Releases use storage separate from Actions artifacts.
       - name: Publish to GitHub Releases (APK for testing + AAB for Play)

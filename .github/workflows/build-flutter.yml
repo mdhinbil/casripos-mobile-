@@ -151,7 +151,10 @@ jobs:
           name: casripos-native-apk
           path: flutter_app/out/*.apk
           if-no-files-found: warn
-          retention-days: 30
+          # One day: this copy only has to survive until the release job
+          # picks it up. The Release keeps the file, and does not count
+          # against Actions storage.
+          retention-days: 1
 
   # ── the counter PC ──────────────────────────────────────────────────────
   #
@@ -220,7 +223,10 @@ jobs:
           name: casripos-windows
           path: flutter_app/out/*.zip
           if-no-files-found: error
-          retention-days: 30
+          # One day: this copy only has to survive until the release job
+          # picks it up. The Release keeps the file, and does not count
+          # against Actions storage.
+          retention-days: 1
 
   # ── one release carrying both ───────────────────────────────────────────
   release:
