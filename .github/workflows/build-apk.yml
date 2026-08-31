@@ -118,6 +118,23 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > $HOME/casri-upload.keystore
           ls -la $HOME/casri-upload.keystore
 
+      # The one thing here that was never pinned.
+      #
+      # p4a builds its own venv and installs pip into it from PyPI at build
+      # time. pip 26.2 (29 July 2026) moved internals that venv still expects,
+      # which broke Isguul's identical build on 31 August:
+      #
+      #   ImportError: cannot import name 'BuildDependencyInstallError'
+      #
+      # PIP_CONSTRAINT is inherited by every child process, so it reaches a pip
+      # nothing in this workflow can otherwise see. Raise the bound once p4a
+      # supports pip 26 - do not remove the line.
+      - name: Pin the pip that p4a installs into its build venv
+        run: |
+          echo 'pip<26' > $HOME/pip-constraint.txt
+          echo "PIP_CONSTRAINT=$HOME/pip-constraint.txt" >> $GITHUB_ENV
+          cat $HOME/pip-constraint.txt
+
       # ── Debug APK (installable for YOUR testing before uploading to Play) ──
       - name: Build APK (debug)
         run: buildozer -v android debug
