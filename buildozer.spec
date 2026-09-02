@@ -39,10 +39,16 @@ orientation     = landscape
 # Immersive fullscreen — hides the system/taskbar so the till is edge-to-edge
 # like Vektori (Vektori runs fullscreen; that's why it has no taskbar).
 fullscreen      = 1
-# Lock landscape and fill the whole tablet. (p4a's `orientation` only accepts
-# portrait/landscape; the webview manifest writes android:screenOrientation
-# from `android.manifest.orientation`, so set it here too to be sure.)
-android.manifest.orientation = landscape
+# Follow the device. Locked to landscape, a phone could only ever show the
+# till sideways - where the sign-in card (490px) does not fit in the ~360px of
+# height a landscape phone has, and the Checkout button sat below the bottom of
+# the cart sheet. A tablet on a counter still gets landscape; it is simply held
+# that way.
+#
+# p4a's own `orientation` above only accepts portrait/landscape, so `sensor`
+# has to be set here: the webview manifest writes android:screenOrientation
+# from this key, last, and it wins.
+android.manifest.orientation = sensor
 
 # ── App icon & presplash (flat navy → suppresses Kivy "Loading..." splash) ──
 icon.filename           = %(source.dir)s/assets/icon.png

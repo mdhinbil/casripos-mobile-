@@ -397,3 +397,41 @@ table.invT td.nm{font-weight:700}
 .pinPad .pinAux{color:#8b97a8;font-size:22px}
 .pinPad .pinOk{background:#1a6ef5;color:#fff;border-color:#1a6ef5;font-size:24px}
 .pinPad .pinOk:hover{background:#0052cc}
+
+/* ═══ A SHORT SCREEN (a phone on its side) ══════════════════════
+   The card is 490px tall and a landscape phone gives it about 360px, so the
+   language buttons and the foot of the card sat below the edge of the screen.
+   Everything here is a size, not a rule - the layout is the same one. */
+@media (max-height:600px){
+  #LP{padding:10px}
+  .lp-card{padding:14px 20px;max-width:420px}
+  .lp-logo{width:38px;height:38px;font-size:19px;border-radius:10px;margin:0 auto 8px}
+  .lp-title{font-size:18px}
+  .lp-sub{font-size:11px;margin-bottom:11px;line-height:1.4}
+  .lp-btn{padding:9px;font-size:13px;margin-top:6px;border-radius:8px}
+  .lp-row{margin-bottom:7px}
+  .lp-row input{padding:8px 12px 8px 34px;font-size:13px}
+  .lp-row .ic{top:8px}
+  .lp-lang{margin-top:9px;padding:2px}
+  .lp-lang-b{padding:5px 15px;font-size:12px}
+  .lp-step{margin-bottom:7px}
+  .lp-ind{padding:8px 6px;font-size:11px}
+  .lp-newws{margin-top:8px;font-size:11px}
+}
+
+/* ═══ A SHORT SCREEN: THE CART SHEET ═══════════════════════════
+   72vh of a landscape phone is 259px, and the sheet needs about 306px for its
+   header, the table row, the totals and the Checkout button - so Checkout was
+   below the edge with nothing to say it was there. The list scrolls; the
+   button must not have to. */
+@media (max-width:900px) and (max-height:600px){
+  .posRight{max-height:96vh}
+  .posCartH{padding:8px 12px}
+  .posCartList{padding:6px 10px}
+  /* In landscape the system bar is usually down the SIDE, not the bottom, so
+     the 40px floor that keeps Checkout clear of it in portrait is 40px of the
+     screen thrown away here. env() still applies wherever it is real. */
+  .posCheckout{padding:8px 10px calc(8px + max(env(safe-area-inset-bottom),6px))}
+  .posRight{transform:translateY(calc(100% - 44px - max(env(safe-area-inset-bottom),6px)))}
+  .posRight.open{transform:translateY(0)}
+}
