@@ -35,7 +35,11 @@ requirements = python3,kivy==2.3.0,android
 p4a.fork = kivy
 p4a.branch = v2024.01.21
 
-orientation     = landscape
+# Every way up except upside down. This is NOT only the manifest's business:
+# p4a turns this list into KIVY_ORIENTATION, and SDL applies it at runtime -
+# after the manifest. Build 47 had manifest `sensor` but this said `landscape`,
+# so SDL pinned the till sideways on every phone anyway.
+orientation     = landscape, portrait, landscape-reverse
 # Immersive fullscreen — hides the system/taskbar so the till is edge-to-edge
 # like Vektori (Vektori runs fullscreen; that's why it has no taskbar).
 fullscreen      = 1
